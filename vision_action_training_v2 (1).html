@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vision-Action Training System</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: #0a0a0a; color: #e0e0e0; min-height: 100vh; padding: 16px;
+}
+h1 { font-size: 15px; font-weight: 500; color: #3fcf6e; letter-spacing: 0.1em; margin-bottom: 16px; }
+.version { font-size: 10px; color: #444; margin-left: 8px; }
+.app { display: flex; flex-direction: column; gap: 12px; max-width: 640px; margin: 0 auto; }
+.panel { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 14px 16px; }
+.panel.vor-panel { border-color: #7F77DD44; }
+.sec-title { font-size: 10px; font-weight: 500; color: #555; margin-bottom: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.sec-title.vor { color: #7F77DD; }
+.divider { height: 0.5px; background: #222; margin: 10px 0; }
+
+.display-wrap { border-radius: 8px; border: 0.5px solid #2a2a2a; height: 220px; position: relative; overflow: hidden; background: #111; }
+.zone-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; }
+.display-zone { flex: 1; position: relative; transition: background 0.08s; }
+.zone-label { position: absolute; bottom: 8px; left: 0; right: 0; text-align: center; font-size: 10px; color: rgba(255,255,255,0.2); pointer-events: none; }
+.motion-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.free-block { position: absolute; top: 0; height: 100%; z-index: 10; }
+
+.timer-bar-wrap { height: 3px; background: #222; border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.timer-bar { height: 3px; background: #3fcf6e; border-radius: 2px; width: 100%; }
+.cur-ind { text-align: center; font-size: 12px; color: #555; min-height: 20px; margin-top: 6px; }
+
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.tog-btn { padding: 6px 13px; font-size: 12px; border: 0.5px solid #333; border-radius: 8px; cursor: pointer; background: transparent; color: #666; transition: all 0.12s; }
+.tog-btn:hover { border-color: #555; color: #aaa; }
+.tog-btn.active { background: #e0e0e0; color: #111; border-color: #e0e0e0; }
+.tog-btn.vor-active { background: #7F77DD; color: #fff; border-color: #7F77DD; }
+
+.action-btn { padding: 8px 18px; font-size: 13px; font-weight: 500; border: 0.5px solid #333; border-radius: 8px; cursor: pointer; background: transparent; color: #e0e0e0; transition: all 0.12s; }
+.action-btn:hover { border-color: #555; }
+.action-btn.primary { background: #3fcf6e; color: #0a0a0a; border-color: #3fcf6e; }
+.action-btn.primary:hover { background: #34b85f; }
+.action-btn.vor { background: #7F77DD; color: #fff; border-color: #7F77DD; }
+
+.ctrl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ctrl-label { font-size: 12px; color: #666; width: 160px; flex-shrink: 0; }
+.ctrl-val { font-size: 12px; font-weight: 500; color: #ccc; min-width: 52px; text-align: right; }
+
+input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: #2a2a2a; border-radius: 2px; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3fcf6e; cursor: pointer; }
+input[type=range].vor-range::-webkit-slider-thumb { background: #7F77DD; }
+
+.radio-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.radio-row label { font-size: 12px; color: #666; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.radio-row input[type=radio] { accent-color: #3fcf6e; }
+
+.legend-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+.session-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.status-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #1a1a1a; color: #555; border: 0.5px solid #2a2a2a; }
+.status-badge.running { background: #0d2a18; color: #3fcf6e; border-color: #1a4d2a; }
+.status-badge.vor-running { background: #1a1933; color: #7F77DD; border-color: #3a3560; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.stat-card { background: #111; border-radius: 8px; padding: 10px 12px; border: 0.5px solid #222; }
+.stat-lbl { font-size: 10px; color: #555; margin-bottom: 4px; letter-spacing: 0.05em; }
+.stat-num { font-size: 22px; font-weight: 500; color: #ccc; }
+
+.sub-opts { padding-top: 10px; }
+
+/* 確率設定 */
+.prob-grid { display: flex; flex-direction: column; gap: 8px; }
+.prob-row { display: flex; align-items: center; gap: 8px; }
+.prob-swatch { width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0; }
+.prob-swatch-pair { display: flex; gap: 2px; flex-shrink: 0; }
+.prob-swatch-pair .prob-swatch { width: 10px; }
+.prob-label { font-size: 12px; color: #666; width: 120px; flex-shrink: 0; }
+.prob-val { font-size: 12px; font-weight: 500; color: #ccc; min-width: 36px; text-align: right; }
+.prob-total { font-size: 11px; color: #555; text-align: right; margin-top: 4px; }
+.prob-total.ok { color: #3fcf6e; }
+.prob-total.ng { color: #D85A30; }
+
+/* VOR */
+.metro-display { background: #111; border-radius: 8px; border: 0.5px solid #2a2a2a; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.metro-dot { width: 32px; height: 32px; border-radius: 50%; background: #2a2a2a; transition: background 0.05s; border: 1px solid #3a3a3a; }
+.metro-dot.beat { background: #7F77DD; border-color: #7F77DD; }
+.metro-bpm { font-size: 28px; font-weight: 500; color: #7F77DD; letter-spacing: 0.05em; }
+.metro-label { font-size: 11px; color: #555; }
+.metro-guide { font-size: 12px; color: #444; text-align: center; line-height: 1.6; margin-top: 4px; }
+.vor-session-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <h1>VISION-ACTION TRAINING SYSTEM <span class="version">v2.0</span></h1>
+
+  <!-- Display -->
+  <div class="panel">
+    <div class="sec-title">DISPLAY</div>
+    <div class="display-wrap" id="display-wrap">
+      <div class="zone-layer" id="zone-layer"></div>
+      <div class="motion-layer" id="motion-layer"></div>
+    </div>
+    <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+    <div class="cur-ind" id="cur-ind">— 停止中 —</div>
+  </div>
+
+  <!-- Pattern & Color -->
+  <div class="panel">
+    <div class="sec-title">表示パターン</div>
+    <div class="btn-group" style="margin-bottom:12px;">
+      <button class="tog-btn active" onclick="setPattern('full')" data-p="full">全面 1色</button>
+      <button class="tog-btn" onclick="setPattern('half')" data-p="half">半面 2色</button>
+      <button class="tog-btn" onclick="setPattern('thirds')" data-p="thirds">3分割</button>
+      <button class="tog-btn" onclick="setPattern('quad')" data-p="quad">4分割</button>
+    </div>
+
+    <div class="sec-title">色の数</div>
+    <div class="radio-row" style="margin-bottom:10px;">
+      <label><input type="radio" name="nc" value="1" checked onchange="setNumColors(1)"> 1色</label>
+      <label><input type="radio" name="nc" value="2" onchange="setNumColors(2)"> 2色</label>
+      <label><input type="radio" name="nc" value="3" onchange="setNumColors(3)"> 3色</label>
+      <label><input type="radio" name="nc" value="4" onchange="setNumColors(4)"> 4色</label>
+    </div>
+
+    <div class="sec-title">ゾーンあたりの色</div>
+    <div class="radio-row">
+      <label><input type="radio" name="pz" value="single" checked onchange="perZone='single'"> 1色ずつ（全ゾーン同じ）</label>
+      <label><input type="radio" name="pz" value="mixed" onchange="perZone='mixed'"> 混合（ゾーンごとランダム）</label>
+    </div>
+  </div>
+
+  <!-- 半面2色 確率設定 -->
+  <div class="panel" id="prob-panel" style="display:none;">
+    <div class="sec-title">半面2色 — 配色確率設定</div>
+    <div class="prob-grid">
+      <div class="prob-row">
+        <div class="prob-swatch-pair">
+          <div class="prob-swatch" style="background:#3B8BD4;"></div>
+          <div class="prob-swatch" style="background:#D85A30;"></div>
+        </div>
+        <span class="prob-label">自分 + 相手</span>
+        <input type="range" min="0" max="100" value="80" step="5" id="pr-mix" oninput="updateProb()">
+        <span class="prob-val" id="pv-mix">80%</span>
+      </div>
+      <div class="prob-row">
+        <div class="prob-swatch-pair">
+          <div class="prob-swatch" style="background:#3B8BD4;"></div>
+          <div class="prob-swatch" style="background:#3B8BD4;"></div>
+        </div>
+        <span class="prob-label">自分 + 自分</span>
+        <input type="range" min="0" max="100" value="10" step="5" id="pr-self" oninput="updateProb()">
+        <span class="prob-val" id="pv-self">10%</span>
+      </div>
+      <div class="prob-row">
+        <div class="prob-swatch-pair">
+          <div class="prob-swatch" style="background:#D85A30;"></div>
+          <div class="prob-swatch" style="background:#D85A30;"></div>
+        </div>
+        <span class="prob-label">相手 + 相手</span>
+        <input type="range" min="0" max="100" value="10" step="5" id="pr-opp" oninput="updateProb()">
+        <span class="prob-val" id="pv-opp">10%</span>
+      </div>
+    </div>
+    <div class="prob-total" id="prob-total">合計: 100%</div>
+  </div>
+
+  <!-- Motion -->
+  <div class="panel">
+    <div class="sec-title">モーション</div>
+    <div class="btn-group" style="margin-bottom:10px;">
+      <button class="tog-btn active" onclick="setMotion('none')" data-m="none">なし</button>
+      <button class="tog-btn" onclick="setMotion('block-slide')" data-m="block-slide">ブロック移動</button>
+      <button class="tog-btn" onclick="setMotion('free-slide')" data-m="free-slide">独立ブロック流入</button>
+      <button class="tog-btn" onclick="setMotion('flash')" data-m="flash">点滅</button>
+    </div>
+
+    <div id="opts-block" style="display:none;" class="sub-opts">
+      <div class="ctrl-row">
+        <span class="ctrl-label">移動スピード</span>
+        <input type="range" min="1" max="5" value="3" step="1" id="sl-bspd" oninput="updateVars()">
+        <span class="ctrl-val" id="val-bspd">中</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">移動距離</span>
+        <input type="range" min="1" max="5" value="3" step="1" id="sl-bdist" oninput="updateVars()">
+        <span class="ctrl-val" id="val-bdist">中</span>
+      </div>
+    </div>
+
+    <div id="opts-free" style="display:none;" class="sub-opts">
+      <div class="ctrl-row">
+        <span class="ctrl-label">移動スピード</span>
+        <input type="range" min="1" max="5" value="3" step="1" id="sl-fspd" oninput="updateVars()">
+        <span class="ctrl-val" id="val-fspd">中</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">ブロック幅</span>
+        <input type="range" min="1" max="5" value="2" step="1" id="sl-fwid" oninput="updateVars()">
+        <span class="ctrl-val" id="val-fwid">細</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variables -->
+  <div class="panel">
+    <div class="sec-title">変数設定</div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">切替間隔（秒）</span>
+      <input type="range" min="10" max="60" value="25" step="5" id="sl-iv" oninput="updateVars()">
+      <span class="ctrl-val" id="val-iv">2.5</span>
+    </div>
+    <div class="divider"></div>
+    <div class="sec-title">凡例（マーカー配置）</div>
+    <div class="legend-row" id="legend-row"></div>
+  </div>
+
+  <!-- Session -->
+  <div class="panel">
+    <div class="session-row">
+      <button class="action-btn primary" onclick="toggleSession()" id="btn-start">開始</button>
+      <button class="action-btn" onclick="resetAll()">リセット</button>
+      <span class="status-badge" id="status-badge">停止中</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-lbl">経過時間</div><div class="stat-num" id="st-time">0:00</div></div>
+      <div class="stat-card"><div class="stat-lbl">切替回数</div><div class="stat-num" id="st-ch">0</div></div>
+      <div class="stat-card"><div class="stat-lbl">表示中</div><div class="stat-num" id="st-cur" style="font-size:13px;">—</div></div>
+    </div>
+  </div>
+
+  <!-- VOR Mode -->
+  <div class="panel vor-panel">
+    <div class="sec-title vor">MODE 3 — VOR TRAINING</div>
+    <div class="metro-display">
+      <div class="metro-dot" id="metro-dot"></div>
+      <div>
+        <div class="metro-bpm" id="metro-bpm-disp">60 BPM</div>
+        <div class="metro-label" style="text-align:center;">頭部運動のリズム</div>
+      </div>
+    </div>
+    <div class="metro-guide">
+      メトロノームのリズムに合わせて頭を左右に動かしながら<br>ディスプレイの色を識別してください
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="ctrl-row" style="margin-top:4px;">
+      <span class="ctrl-label" style="color:#888;">BPM</span>
+      <input type="range" min="30" max="120" value="60" step="5" id="sl-bpm" class="vor-range" oninput="updateVOR()">
+      <span class="ctrl-val" id="val-bpm" style="color:#7F77DD;">60</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label" style="color:#888;">ビート音</span>
+      <div class="btn-group">
+        <button class="tog-btn vor-active" onclick="setBeepMode('visual')" data-b="visual">ビジュアルのみ</button>
+        <button class="tog-btn" onclick="setBeepMode('audio')" data-b="audio">音あり</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="vor-session-row">
+      <button class="action-btn vor" onclick="toggleVOR()" id="btn-vor">VOR 開始</button>
+      <button class="action-btn" onclick="stopVOR()">停止</button>
+      <span class="status-badge" id="vor-badge">停止中</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-lbl">経過時間</div><div class="stat-num" id="vor-time">0:00</div></div>
+      <div class="stat-card"><div class="stat-lbl">BPM</div><div class="stat-num" id="vor-bpm-stat" style="color:#7F77DD;">—</div></div>
+      <div class="stat-card"><div class="stat-lbl">ビート数</div><div class="stat-num" id="vor-beats">0</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CDEFS = [
+  { name: '自分', hex: '#3B8BD4' },
+  { name: '相手', hex: '#D85A30' },
+  { name: '中立', hex: '#3fcf6e' },
+  { name: '第4',  hex: '#EF9F27' },
+];
+const LLABELS  = ['左マーカー','右マーカー','前マーカー','後マーカー'];
+const SPDVALS  = [0.15, 0.35, 0.6, 0.95, 1.4];
+const SPDLBL   = ['非常に遅い','遅い','中','速い','非常に速い'];
+const DISTLBL  = ['極小','小','中','大','極大'];
+const WIDLBL   = ['極細','細','中','太','極太'];
+
+let pattern='full', motion='none', numColors=1, perZone='single';
+let running=false, changeCount=0;
+let startTime=null, loopTimer=null, timerInterval=null;
+let animFrame=null, freeSpawnTimer=null;
+let currentZoneColors=[];
+let blockSlideData=null;
+let freeBlockEls=[];
+
+// VOR state
+let vorRunning=false, vorBeatCount=0, vorStartTime=null;
+let vorTimer=null, vorTimerInterval=null, beepMode='visual';
+let audioCtx=null;
+
+function setPattern(p) {
+  pattern=p;
+  document.querySelectorAll('[data-p]').forEach(b=>b.classList.toggle('active',b.dataset.p===p));
+  document.getElementById('prob-panel').style.display=(p==='half'&&numColors===2)?'block':'none';
+  buildZones();
+}
+
+function setNumColors(n) {
+  numColors=n;
+  buildLegend();
+  buildZones();
+  document.getElementById('prob-panel').style.display=(pattern==='half'&&n===2)?'block':'none';
+}
+
+function setMotion(m) {
+  motion=m;
+  document.querySelectorAll('[data-m]').forEach(b=>b.classList.toggle('active',b.dataset.m===m));
+  document.getElementById('opts-block').style.display=m==='block-slide'?'block':'none';
+  document.getElementById('opts-free').style.display=m==='free-slide'?'block':'none';
+  stopMotion();
+}
+
+function setBeepMode(b) {
+  beepMode=b;
+  document.querySelectorAll('[data-b]').forEach(btn=>btn.classList.toggle('vor-active',btn.dataset.b===b));
+}
+
+function updateVars() {
+  document.getElementById('val-iv').textContent=(parseInt(document.getElementById('sl-iv').value)/10).toFixed(1);
+  document.getElementById('val-bspd').textContent=SPDLBL[parseInt(document.getElementById('sl-bspd').value)-1];
+  document.getElementById('val-bdist').textContent=DISTLBL[parseInt(document.getElementById('sl-bdist').value)-1];
+  document.getElementById('val-fspd').textContent=SPDLBL[parseInt(document.getElementById('sl-fspd').value)-1];
+  document.getElementById('val-fwid').textContent=WIDLBL[parseInt(document.getElementById('sl-fwid').value)-1];
+}
+
+function updateVOR() {
+  const bpm=parseInt(document.getElementById('sl-bpm').value);
+  document.getElementById('val-bpm').textContent=bpm;
+  document.getElementById('metro-bpm-disp').textContent=bpm+' BPM';
+  if(vorRunning) { stopVOR(); startVOR(); }
+}
+
+function updateProb() {
+  const mix=parseInt(document.getElementById('pr-mix').value);
+  const self=parseInt(document.getElementById('pr-self').value);
+  const opp=parseInt(document.getElementById('pr-opp').value);
+  document.getElementById('pv-mix').textContent=mix+'%';
+  document.getElementById('pv-self').textContent=self+'%';
+  document.getElementById('pv-opp').textContent=opp+'%';
+  const total=mix+self+opp;
+  const el=document.getElementById('prob-total');
+  el.textContent='合計: '+total+'%';
+  el.className='prob-total '+(total===100?'ok':'ng');
+}
+
+function buildLegend() {
+  document.getElementById('legend-row').innerHTML=CDEFS.slice(0,numColors).map((c,i)=>
+    `<div class="legend-item"><div class="legend-dot" style="background:${c.hex};"></div>${c.name} → ${LLABELS[i]}</div>`
+  ).join('');
+}
+
+function getZoneCount() { return {full:1,half:2,thirds:3,quad:4}[pattern]||1; }
+
+function buildZones() {
+  const n=getZoneCount();
+  const zl=document.getElementById('zone-layer');
+  zl.innerHTML='';
+  for(let i=0;i<n;i++) {
+    const d=document.createElement('div');
+    d.className='display-zone'; d.id='zone-'+i; d.style.background='#111';
+    const lbl=document.createElement('span');
+    lbl.className='zone-label'; lbl.textContent='ZONE '+(i+1);
+    d.appendChild(lbl); zl.appendChild(d);
+  }
+  currentZoneColors=Array(n).fill('#111');
+}
+
+function pickColors() {
+  const n=getZoneCount();
+
+  // 半面2色かつ確率設定が有効な場合
+  if(pattern==='half' && numColors===2) {
+    const mix=parseInt(document.getElementById('pr-mix').value);
+    const self=parseInt(document.getElementById('pr-self').value);
+    const opp=parseInt(document.getElementById('pr-opp').value);
+    const total=mix+self+opp;
+    if(total===100) {
+      const r=Math.random()*100;
+      if(r<mix) {
+        // 自分+相手（左右ランダム）
+        return Math.random()<0.5
+          ? [CDEFS[0].hex, CDEFS[1].hex]
+          : [CDEFS[1].hex, CDEFS[0].hex];
+      } else if(r<mix+self) {
+        return [CDEFS[0].hex, CDEFS[0].hex];
+      } else {
+        return [CDEFS[1].hex, CDEFS[1].hex];
+      }
+    }
+  }
+
+  // 通常ランダム
+  const pool=CDEFS.slice(0,numColors).map(c=>c.hex);
+  if(perZone==='single'){
+    const c=pool[Math.floor(Math.random()*pool.length)];
+    return Array(n).fill(c);
+  }
+  return Array.from({length:n},()=>pool[Math.floor(Math.random()*pool.length)]);
+}
+
+function applyColors(colors) {
+  currentZoneColors=colors;
+  colors.forEach((c,i)=>{ const z=document.getElementById('zone-'+i); if(z) z.style.background=c; });
+  const names=colors.map(h=>CDEFS.find(c=>c.hex===h)?.name||'?');
+  const unique=[...new Set(names)];
+  document.getElementById('st-cur').textContent=unique.join(' / ');
+  document.getElementById('cur-ind').textContent=running?`表示中：${unique.join(' / ')}`:'— 停止中 —';
+}
+
+// Block slide
+function startBlockSlide() {
+  const wrap=document.getElementById('display-wrap');
+  const W=wrap.clientWidth;
+  const goRight=Math.random()<0.5;
+  const di=parseInt(document.getElementById('sl-bdist').value)-1;
+  const deltaPx=(goRight?1:-1)*[0.07,0.14,0.22,0.32,0.44][di]*W;
+  const si=parseInt(document.getElementById('sl-bspd').value)-1;
+  const spd=SPDVALS[si]*W/100;
+  const nn=currentZoneColors.length, zw=W/nn;
+  blockSlideData=currentZoneColors.map((c,i)=>{
+    const el=document.createElement('div');
+    el.style.cssText=`position:absolute;top:0;height:100%;background:${c};width:${zw}px;left:${i*zw}px;z-index:5;`;
+    document.getElementById('motion-layer').appendChild(el);
+    return {el,x:i*zw,target:i*zw+deltaPx,spd:goRight?spd:-spd};
+  });
+  animateBlockSlide();
+}
+
+function animateBlockSlide() {
+  if(!running||motion!=='block-slide'||!blockSlideData) return;
+  let done=true;
+  blockSlideData.forEach(b=>{
+    const diff=b.target-b.x;
+    if(Math.abs(diff)>Math.abs(b.spd)){b.x+=b.spd;done=false;} else b.x=b.target;
+    b.el.style.left=b.x+'px';
+  });
+  if(done){blockSlideData.forEach(b=>b.el.remove());blockSlideData=null;return;}
+  animFrame=requestAnimationFrame(animateBlockSlide);
+}
+
+// Free slide
+function spawnFreeBlock() {
+  if(!running||motion!=='free-slide') return;
+  const wrap=document.getElementById('display-wrap');
+  const W=wrap.clientWidth;
+  const pool=CDEFS.slice(0,numColors).map(c=>c.hex);
+  const color=pool[Math.floor(Math.random()*pool.length)];
+  const wi=parseInt(document.getElementById('sl-fwid').value)-1;
+  const w=[0.06,0.12,0.20,0.30,0.42][wi]*W;
+  const goRight=Math.random()<0.5;
+  const si=parseInt(document.getElementById('sl-fspd').value)-1;
+  const spd=(goRight?1:-1)*SPDVALS[si]*W/100;
+  const el=document.createElement('div');
+  el.className='free-block'; el.style.background=color;
+  el.style.width=w+'px'; el.style.left=(goRight?-w:W)+'px';
+  document.getElementById('motion-layer').appendChild(el);
+  freeBlockEls.push({el,x:goRight?-w:W,w,spd,goRight});
+  const iv=parseInt(document.getElementById('sl-iv').value)*100;
+  freeSpawnTimer=setTimeout(spawnFreeBlock,Math.max(500,iv*0.5+Math.random()*400));
+  if(!animFrame) animateFree();
+}
+
+function animateFree() {
+  if(!running||motion!=='free-slide'){animFrame=null;return;}
+  const wrap=document.getElementById('display-wrap');
+  const W=wrap.clientWidth;
+  freeBlockEls=freeBlockEls.filter(b=>{
+    b.x+=b.spd; b.el.style.left=b.x+'px';
+    const gone=b.goRight?b.x>W:b.x+b.w<0;
+    if(gone){b.el.remove();return false;} return true;
+  });
+  animFrame=requestAnimationFrame(animateFree);
+}
+
+function stopMotion() {
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  clearTimeout(freeSpawnTimer);
+  if(blockSlideData){blockSlideData.forEach(b=>b.el.remove());blockSlideData=null;}
+  freeBlockEls.forEach(b=>b.el.remove()); freeBlockEls=[];
+  document.getElementById('motion-layer').innerHTML='';
+}
+
+function nextChange() {
+  if(!running) return;
+  stopMotion();
+  const colors=pickColors();
+  applyColors(colors);
+  changeCount++;
+  document.getElementById('st-ch').textContent=changeCount;
+  if(motion==='block-slide') setTimeout(()=>{if(running)startBlockSlide();},200);
+  else if(motion==='free-slide') spawnFreeBlock();
+  else if(motion==='flash'){
+    const fl=document.createElement('div');
+    fl.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:20;';
+    document.getElementById('motion-layer').appendChild(fl);
+    setTimeout(()=>fl.remove(),100);
+  }
+  const iv=parseInt(document.getElementById('sl-iv').value)*100;
+  animTimerBar(iv);
+  loopTimer=setTimeout(nextChange,iv);
+}
+
+function animTimerBar(dur) {
+  const bar=document.getElementById('timer-bar');
+  bar.style.transition='none'; bar.style.width='100%';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    bar.style.transition=`width ${dur}ms linear`; bar.style.width='0%';
+  }));
+}
+
+function startTimer() {
+  startTime=Date.now();
+  timerInterval=setInterval(()=>{
+    const e=Math.floor((Date.now()-startTime)/1000);
+    document.getElementById('st-time').textContent=`${Math.floor(e/60)}:${String(e%60).padStart(2,'0')}`;
+  },1000);
+}
+function stopTimer(){clearInterval(timerInterval);}
+
+function toggleSession(){if(running)stopSession();else startSession();}
+
+function startSession() {
+  running=true; changeCount=0;
+  document.getElementById('btn-start').textContent='停止';
+  document.getElementById('status-badge').textContent='実行中';
+  document.getElementById('status-badge').classList.add('running');
+  startTimer(); nextChange();
+}
+
+function stopSession() {
+  running=false;
+  clearTimeout(loopTimer); stopMotion(); stopTimer();
+  document.getElementById('btn-start').textContent='開始';
+  document.getElementById('status-badge').textContent='停止中';
+  document.getElementById('status-badge').classList.remove('running');
+  document.getElementById('timer-bar').style.transition='none';
+  document.getElementById('timer-bar').style.width='100%';
+  document.getElementById('cur-ind').textContent='— 停止中 —';
+  document.getElementById('st-cur').textContent='—';
+  applyColors(Array(getZoneCount()).fill('#111'));
+}
+
+function resetAll() {
+  stopSession(); changeCount=0;
+  document.getElementById('st-time').textContent='0:00';
+  document.getElementById('st-ch').textContent='0';
+}
+
+// ── VOR ─────────────────────────────────────────────────────
+function playBeep() {
+  try {
+    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.value=880;
+    gain.gain.setValueAtTime(0.3,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.08);
+    osc.start(); osc.stop(audioCtx.currentTime+0.08);
+  } catch(e) {}
+}
+
+function pickVORColors() {
+  // 半面2色の確率設定を使う
+  const mix=parseInt(document.getElementById('pr-mix').value);
+  const self=parseInt(document.getElementById('pr-self').value);
+  const opp=parseInt(document.getElementById('pr-opp').value);
+  const total=mix+self+opp;
+  if(total===100) {
+    const r=Math.random()*100;
+    if(r<mix) {
+      return Math.random()<0.5
+        ? [CDEFS[0].hex, CDEFS[1].hex]
+        : [CDEFS[1].hex, CDEFS[0].hex];
+    } else if(r<mix+self) {
+      return [CDEFS[0].hex, CDEFS[0].hex];
+    } else {
+      return [CDEFS[1].hex, CDEFS[1].hex];
+    }
+  }
+  // 確率が100%でない場合はデフォルト
+  return Math.random()<0.5
+    ? [CDEFS[0].hex, CDEFS[1].hex]
+    : [CDEFS[1].hex, CDEFS[0].hex];
+}
+
+function applyVORDisplay() {
+  // ディスプレイを強制的に半面2色に切り替え
+  const zl=document.getElementById('zone-layer');
+  zl.innerHTML='';
+  const colors=pickVORColors();
+  colors.forEach((c,i)=>{
+    const d=document.createElement('div');
+    d.className='display-zone'; d.id='zone-'+i; d.style.background=c;
+    zl.appendChild(d);
+  });
+  currentZoneColors=colors;
+  const names=colors.map(h=>CDEFS.find(c=>c.hex===h)?.name||'?');
+  document.getElementById('cur-ind').textContent=`VOR表示中：${names.join(' / ')}`;
+}
+
+function doBeat() {
+  vorBeatCount++;
+  document.getElementById('vor-beats').textContent=vorBeatCount;
+  const dot=document.getElementById('metro-dot');
+  dot.classList.add('beat');
+  setTimeout(()=>dot.classList.remove('beat'),80);
+  if(beepMode==='audio') playBeep();
+  // ビートに合わせてディスプレイ切り替え
+  applyVORDisplay();
+}
+
+function startVOR() {
+  if(running) stopSession(); // メインセッションを止める
+  const bpm=parseInt(document.getElementById('sl-bpm').value);
+  const interval=Math.round(60000/bpm);
+  vorRunning=true; vorBeatCount=0;
+  vorStartTime=Date.now();
+  document.getElementById('btn-vor').textContent='VOR 停止';
+  document.getElementById('vor-badge').textContent='実行中';
+  document.getElementById('vor-badge').classList.add('vor-running');
+  document.getElementById('vor-bpm-stat').textContent=bpm;
+  vorTimerInterval=setInterval(()=>{
+    const e=Math.floor((Date.now()-vorStartTime)/1000);
+    document.getElementById('vor-time').textContent=`${Math.floor(e/60)}:${String(e%60).padStart(2,'0')}`;
+  },1000);
+  // 最初のビート
+  function beat(){
+    if(!vorRunning) return;
+    doBeat();
+    vorTimer=setTimeout(beat,interval);
+  }
+  beat();
+}
+
+function stopVOR() {
+  vorRunning=false;
+  clearTimeout(vorTimer);
+  clearInterval(vorTimerInterval);
+  document.getElementById('btn-vor').textContent='VOR 開始';
+  document.getElementById('vor-badge').textContent='停止中';
+  document.getElementById('vor-badge').classList.remove('vor-running');
+  document.getElementById('vor-bpm-stat').textContent='—';
+  document.getElementById('metro-dot').classList.remove('beat');
+  document.getElementById('cur-ind').textContent='— 停止中 —';
+  // ディスプレイをリセット
+  buildZones();
+}
+
+function toggleVOR(){if(vorRunning)stopVOR();else startVOR();}
+
+buildLegend(); buildZones(); updateVars(); updateProb();
+</script>
+</body>
+</html>
