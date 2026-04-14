@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<title>VATS — Vision-Action Training System</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0D1B2A;
+    --navy2: #1B2E42;
+    --blue: #1A6EBD;
+    --lblue: #4FA3E0;
+    --accent: #00D4FF;
+    --team: #00E5A0;
+    --opp: #FF4560;
+    --white: #F0F4F8;
+    --gray: #6B8099;
+    --panel: rgba(13,27,42,0.92);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    height: 100dvh;
+    width: 100vw;
+    touch-action: manipulation;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ===== SETUP SCREEN ===== */
+  #setup {
+    background: linear-gradient(160deg, #0D1B2A 0%, #0A2540 50%, #0D1B2A 100%);
+    padding: 40px 32px 32px;
+    overflow-y: auto;
+    gap: 0;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--gray);
+    text-transform: uppercase;
+  }
+
+  .situation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 6px;
+    padding: 8px 14px;
+    margin-bottom: 28px;
+    margin-top: 12px;
+  }
+
+  .situation-badge .pos {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .situation-badge .sit {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--white);
+    opacity: 0.85;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    margin-top: 28px;
+  }
+
+  /* Color pickers */
+  .color-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+
+  .color-group { display: flex; flex-direction: column; gap: 10px; }
+
+  .color-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .color-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+
+  .swatch.selected { border-color: var(--white); transform: scale(1.1); }
+
+  /* Sliders */
+  .slider-group { display: flex; flex-direction: column; gap: 20px; }
+
+  .slider-row { display: flex; flex-direction: column; gap: 8px; }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .slider-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--white);
+    opacity: 0.85;
+  }
+
+  .slider-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+
+  .slider-unit {
+    font-size: 11px;
+    color: var(--gray);
+    margin-left: 2px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--navy2);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(0,212,255,0.4);
+  }
+
+  /* Count controls */
+  .count-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .count-group {
+    background: var(--navy2);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .count-label {
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.8;
+  }
+
+  .count-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .count-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: var(--white);
+    font-size: 20px;
+    font-weight: 300;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    touch-action: manipulation;
+  }
+
+  .count-btn:active { background: rgba(255,255,255,0.15); }
+
+  .count-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--white);
+    letter-spacing: 1px;
+  }
+
+  /* Variable highlight */
+  .var-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .var-tag {
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    opacity: 0.9;
+  }
+
+  .var-tag.high {
+    background: rgba(0,212,255,0.15);
+    border-color: rgba(0,212,255,0.35);
+    opacity: 1;
+  }
+
+  /* Instruction */
+  .instruction-box {
+    background: rgba(255,255,255,0.04);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px;
+  }
+
+  .instruction-box p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--white);
+    opacity: 0.75;
+  }
+
+  /* Start button */
+  .start-btn {
+    margin-top: 32px;
+    margin-bottom: 40px;
+    width: 100%;
+    height: 64px;
+    background: var(--accent);
+    color: var(--navy);
+    border: none;
+    border-radius: 14px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    touch-action: manipulation;
+  }
+
+  .start-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* ===== TRAINING SCREEN ===== */
+  #training {
+    background: #000;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* HUD */
+  .hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    z-index: 10;
+  }
+
+  .hud-left { display: flex; flex-direction: column; gap: 2px; }
+
+  .hud-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  .hud-sub {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+  }
+
+  .hud-right { display: flex; gap: 12px; align-items: center; }
+
+  .hud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+
+  .hud-stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--white);
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .hud-stat-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+  }
+
+  .hud-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  /* Bottom controls */
+  .bottom-controls {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 20px 24px 32px;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .ctrl-btn {
+    height: 52px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    touch-action: manipulation;
+    padding: 0 28px;
+  }
+
+  .ctrl-btn:active { opacity: 0.8; transform: scale(0.97); }
+
+  .ctrl-btn.primary { background: var(--accent); color: var(--navy); }
+  .ctrl-btn.secondary { background: rgba(255,255,255,0.1); color: var(--white); border: 1px solid rgba(255,255,255,0.15); }
+  .ctrl-btn.danger { background: rgba(255,69,96,0.15); color: var(--opp); border: 1px solid rgba(255,69,96,0.25); }
+
+  /* Countdown overlay */
+  #countdown-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.75);
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  #countdown-overlay.visible { opacity: 1; pointer-events: all; }
+
+  .countdown-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 180px;
+    color: var(--accent);
+    text-shadow: 0 0 60px rgba(0,212,255,0.4);
+    line-height: 1;
+    transition: transform 0.2s;
+  }
+
+  /* Pulse ring animation */
+  @keyframes pulse-ring {
+    0% { transform: scale(0.85); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 0.3; }
+    100% { transform: scale(0.85); opacity: 0.8; }
+  }
+
+  /* Timer bar */
+  .timer-bar-wrap {
+    position: absolute;
+    bottom: 88px; left: 24px; right: 24px;
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    z-index: 10;
+    overflow: hidden;
+  }
+
+  .timer-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width linear;
+    width: 100%;
+  }
+
+  /* Session counter */
+  .session-counter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.15);
+    z-index: 5;
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="setup" class="screen active">
+
+  <div class="logo-row">
+    <span class="logo">VATS</span>
+    <span class="logo-sub">Vision-Action Training System</span>
+  </div>
+
+  <div class="situation-badge">
+    <span class="pos">アンカー</span>
+    <span style="color:var(--gray);font-size:11px;">|</span>
+    <span class="sit">① オールコートプレッシングへの対応</span>
+  </div>
+
+  <!-- Color settings -->
+  <div class="section-label">カラー設定</div>
+  <div class="color-row">
+    <div class="color-group">
+      <div class="color-label">
+        <span class="color-dot" id="team-dot" style="background:#00E5A0"></span>
+        味方カラー
+      </div>
+      <div class="color-swatches" id="team-swatches">
+        <div class="swatch selected" data-color="#00E5A0" style="background:#00E5A0"></div>
+        <div class="swatch" data-color="#00BFFF" style="background:#00BFFF"></div>
+        <div class="swatch" data-color="#FFD700" style="background:#FFD700"></div>
+        <div class="swatch" data-color="#FFFFFF" style="background:#FFFFFF;border:1px solid #444"></div>
+        <div class="swatch" data-color="#FF8C00" style="background:#FF8C00"></div>
+      </div>
+    </div>
+    <div class="color-group">
+      <div class="color-label">
+        <span class="color-dot" id="opp-dot" style="background:#FF4560"></span>
+        相手カラー
+      </div>
+      <div class="color-swatches" id="opp-swatches">
+        <div class="swatch selected" data-color="#FF4560" style="background:#FF4560"></div>
+        <div class="swatch" data-color="#FF2222" style="background:#FF2222"></div>
+        <div class="swatch" data-color="#FF6B35" style="background:#FF6B35"></div>
+        <div class="swatch" data-color="#CC44FF" style="background:#CC44FF"></div>
+        <div class="swatch" data-color="#FF1493" style="background:#FF1493"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block counts -->
+  <div class="section-label">ブロック数</div>
+  <div class="count-row">
+    <div class="count-group">
+      <div class="count-label">
+        <span class="color-dot" id="team-count-dot" style="background:#00E5A0"></span>
+        味方
+      </div>
+      <div class="count-control">
+        <button class="count-btn" onclick="changeCount('team',-1)">−</button>
+        <span class="count-num" id="team-count">3</span>
+        <button class="count-btn" onclick="changeCount('team',1)">＋</button>
+      </div>
+    </div>
+    <div class="count-group">
+      <div class="count-label">
+        <span class="color-dot" id="opp-count-dot" style="background:#FF4560"></span>
+        相手
+      </div>
+      <div class="count-control">
+        <button class="count-btn" onclick="changeCount('opp',-1)">−</button>
+        <span class="count-num" id="opp-count">4</span>
+        <button class="count-btn" onclick="changeCount('opp',1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timing slider -->
+  <div class="section-label">タイミング設定</div>
+  <div class="slider-group">
+    <div class="slider-row">
+      <div class="slider-header">
+        <span class="slider-name">切り替わり時間</span>
+        <span><span class="slider-value" id="timing-val">2.0</span><span class="slider-unit">秒</span></span>
+      </div>
+      <input type="range" id="timing-slider" min="0.5" max="5" step="0.1" value="2.0"
+        oninput="document.getElementById('timing-val').textContent=parseFloat(this.value).toFixed(1)">
+    </div>
+
+    <div class="slider-row">
+      <div class="slider-header">
+        <span class="slider-name">移動速度</span>
+        <span><span class="slider-value" id="speed-val">5</span></span>
+      </div>
+      <input type="range" id="speed-slider" min="1" max="10" step="1" value="5"
+        oninput="document.getElementById('speed-val').textContent=this.value">
+    </div>
+  </div>
+
+  <!-- Variable tags -->
+  <div class="section-label">このシチュエーションの重要変数</div>
+  <div class="var-tags">
+    <span class="var-tag high">スキャニング頻度 ◎</span>
+    <span class="var-tag high">時間枠予期精度 ◎</span>
+    <span class="var-tag high">パターン認識 ◎</span>
+  </div>
+
+  <!-- Instruction -->
+  <div class="section-label">身体動作指示</div>
+  <div class="instruction-box">
+    <p>CBからボールを受ける前に前後を確認し、プレッシャーが来る方向と逃げ道を把握してから、ワンタッチで逃がすかキープするかを決めてください。</p>
+  </div>
+
+  <button class="start-btn" onclick="startSession()">SESSION START</button>
+</div>
+
+<!-- ===== TRAINING SCREEN ===== -->
+<div id="training" class="screen">
+  <canvas id="canvas"></canvas>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-left">
+      <span class="hud-title">VATS</span>
+      <span class="hud-sub">アンカー — ① オールコートプレス</span>
+    </div>
+    <div class="hud-right">
+      <div class="hud-stat">
+        <span class="hud-stat-val" id="hud-trial">0</span>
+        <span class="hud-stat-label">試行</span>
+      </div>
+      <div class="hud-divider"></div>
+      <div class="hud-stat">
+        <span class="hud-stat-val" id="hud-time">0:00</span>
+        <span class="hud-stat-label">経過</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer bar -->
+  <div class="timer-bar-wrap">
+    <div class="timer-bar-fill" id="timer-bar"></div>
+  </div>
+
+  <!-- Session counter watermark -->
+  <div class="session-counter" id="session-counter">READY</div>
+
+  <!-- Bottom controls -->
+  <div class="bottom-controls">
+    <button class="ctrl-btn secondary" onclick="togglePause()" id="pause-btn">PAUSE</button>
+    <button class="ctrl-btn danger" onclick="endSession()">終了</button>
+  </div>
+
+  <!-- Countdown overlay -->
+  <div id="countdown-overlay">
+    <span class="countdown-num" id="countdown-num">3</span>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+const state = {
+  teamColor: '#00E5A0',
+  oppColor: '#FF4560',
+  teamCount: 3,
+  oppCount: 4,
+  timing: 2.0,
+  speed: 5,
+};
+
+let blocks = [];
+let animFrame = null;
+let sessionTimer = null;
+let sessionSeconds = 0;
+let trialCount = 0;
+let isPaused = false;
+let currentSceneTimer = null;
+let timerBarAnim = null;
+let sceneStartTime = null;
+let sceneDuration = 0;
+
+// ===== COLOR SWATCHES =====
+function initSwatches() {
+  document.querySelectorAll('#team-swatches .swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('#team-swatches .swatch').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+      state.teamColor = s.dataset.color;
+      document.getElementById('team-dot').style.background = state.teamColor;
+      document.getElementById('team-count-dot').style.background = state.teamColor;
+    });
+  });
+  document.querySelectorAll('#opp-swatches .swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('#opp-swatches .swatch').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+      state.oppColor = s.dataset.color;
+      document.getElementById('opp-dot').style.background = state.oppColor;
+      document.getElementById('opp-count-dot').style.background = state.oppColor;
+    });
+  });
+}
+
+// ===== COUNT CONTROLS =====
+function changeCount(type, delta) {
+  if (type === 'team') {
+    state.teamCount = Math.max(1, Math.min(8, state.teamCount + delta));
+    document.getElementById('team-count').textContent = state.teamCount;
+  } else {
+    state.oppCount = Math.max(1, Math.min(8, state.oppCount + delta));
+    document.getElementById('opp-count').textContent = state.oppCount;
+  }
+}
+
+// ===== CANVAS & BLOCKS =====
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+// Block class
+class Block {
+  constructor(color, index, total, isOpp) {
+    this.color = color;
+    this.isOpp = isOpp;
+    this.reset(index, total);
+  }
+
+  reset(index, total) {
+    const W = canvas.width;
+    const H = canvas.height;
+    const margin = 60;
+    const blockSize = Math.min(W, H) * 0.085;
+    this.size = blockSize;
+    this.speed = (state.speed * 0.4 + 0.8) * (0.7 + Math.random() * 0.6);
+
+    // Distribute blocks across the field
+    const cols = Math.ceil(Math.sqrt(total));
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const cellW = (W - margin * 2) / cols;
+    const cellH = (H * 0.65) / Math.ceil(total / cols);
+
+    this.x = margin + col * cellW + cellW * (0.2 + Math.random() * 0.6);
+    this.y = margin + row * cellH + cellH * (0.2 + Math.random() * 0.6);
+
+    // Opponent blocks cluster toward center-top (pressure)
+    if (this.isOpp) {
+      this.x = W * (0.25 + Math.random() * 0.5);
+      this.y = H * (0.1 + Math.random() * 0.4);
+    }
+
+    // Target position (where block is moving to)
+    this.setNewTarget();
+  }
+
+  setNewTarget() {
+    const W = canvas.width;
+    const H = canvas.height;
+    const margin = 50;
+
+    if (this.isOpp) {
+      // Opponent: converge toward center with pressure motion
+      this.tx = W * (0.3 + Math.random() * 0.4);
+      this.ty = H * (0.15 + Math.random() * 0.35);
+      // Sometimes simulate pressing (move toward bottom = toward player)
+      if (Math.random() < 0.3) {
+        this.ty = H * (0.45 + Math.random() * 0.25);
+      }
+    } else {
+      // Teammate: spread out to create passing options
+      this.tx = margin + Math.random() * (W - margin * 2);
+      this.ty = H * (0.2 + Math.random() * 0.65);
+    }
+
+    const dx = this.tx - this.x;
+    const dy = this.ty - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    this.vx = (dx / dist) * this.speed;
+    this.vy = (dy / dist) * this.speed;
+  }
+
+  update() {
+    if (isPaused) return;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    const dx = this.tx - this.x;
+    const dy = this.ty - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 8) {
+      this.setNewTarget();
+    }
+  }
+
+  draw() {
+    const s = this.size;
+    const r = s * 0.22;
+
+    // Glow
+    const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, s * 0.9);
+    grd.addColorStop(0, this.color + '35');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, s * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Block
+    ctx.beginPath();
+    ctx.roundRect(this.x - s/2, this.y - s/2, s, s, r);
+    ctx.fillStyle = this.color + 'CC';
+    ctx.fill();
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Inner highlight
+    ctx.beginPath();
+    ctx.roundRect(this.x - s/2 + 3, this.y - s/2 + 3, s - 6, s * 0.35, r * 0.5);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fill();
+  }
+}
+
+function createBlocks() {
+  blocks = [];
+  for (let i = 0; i < state.teamCount; i++) {
+    blocks.push(new Block(state.teamColor, i, state.teamCount, false));
+  }
+  for (let i = 0; i < state.oppCount; i++) {
+    blocks.push(new Block(state.oppColor, i, state.oppCount, true));
+  }
+}
+
+function drawField() {
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // Background gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#050D14');
+  bg.addColorStop(1, '#0A1929');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+  ctx.lineWidth = 1;
+  const gridSize = 60;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Center reference line (horizontal)
+  ctx.strokeStyle = 'rgba(0,212,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([8, 8]);
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.5);
+  ctx.lineTo(W, H * 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Player position indicator (bottom center)
+  const px = W / 2;
+  const py = H * 0.82;
+  ctx.beginPath();
+  ctx.arc(px, py, 18, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(px, py, 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,212,255,0.5)';
+  ctx.fill();
+
+  // "YOU" label
+  ctx.fillStyle = 'rgba(0,212,255,0.35)';
+  ctx.font = '500 11px DM Sans';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOU', px, py + 32);
+}
+
+function render() {
+  drawField();
+  blocks.forEach(b => { b.update(); b.draw(); });
+  animFrame = requestAnimationFrame(render);
+}
+
+// ===== SCENE MANAGEMENT =====
+function scheduleNextScene() {
+  if (isPaused) return;
+
+  sceneDuration = state.timing * 1000;
+  sceneStartTime = Date.now();
+
+  // Animate timer bar
+  const bar = document.getElementById('timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  requestAnimationFrame(() => {
+    bar.style.transition = `width ${sceneDuration}ms linear`;
+    bar.style.width = '0%';
+  });
+
+  currentSceneTimer = setTimeout(() => {
+    nextScene();
+  }, sceneDuration);
+}
+
+function nextScene() {
+  trialCount++;
+  document.getElementById('hud-trial').textContent = trialCount;
+  document.getElementById('session-counter').textContent = `TRIAL ${trialCount}`;
+
+  // Redistribute blocks
+  blocks.forEach((b, i) => {
+    b.setNewTarget();
+    // Add occasional "reset" for more variety
+    if (Math.random() < 0.4) {
+      const isOpp = b.isOpp;
+      const W = canvas.width;
+      const H = canvas.height;
+      if (isOpp) {
+        b.x = W * (0.2 + Math.random() * 0.6);
+        b.y = H * (0.05 + Math.random() * 0.3);
+      } else {
+        b.x = 50 + Math.random() * (W - 100);
+        b.y = H * (0.15 + Math.random() * 0.6);
+      }
+      b.setNewTarget();
+    }
+  });
+
+  scheduleNextScene();
+}
+
+// ===== SESSION =====
+function startSession() {
+  state.timing = parseFloat(document.getElementById('timing-slider').value);
+  state.speed = parseInt(document.getElementById('speed-slider').value);
+
+  showScreen('training');
+  resizeCanvas();
+  createBlocks();
+
+  // Countdown
+  const overlay = document.getElementById('countdown-overlay');
+  const numEl = document.getElementById('countdown-num');
+  overlay.classList.add('visible');
+  let count = 3;
+  numEl.textContent = count;
+
+  const tick = setInterval(() => {
+    count--;
+    if (count <= 0) {
+      clearInterval(tick);
+      overlay.classList.remove('visible');
+      render();
+      startTimers();
+      scheduleNextScene();
+    } else {
+      numEl.textContent = count;
+    }
+  }, 900);
+}
+
+function startTimers() {
+  sessionSeconds = 0;
+  trialCount = 0;
+  sessionTimer = setInterval(() => {
+    sessionSeconds++;
+    const m = Math.floor(sessionSeconds / 60);
+    const s = sessionSeconds % 60;
+    document.getElementById('hud-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pause-btn');
+  if (isPaused) {
+    btn.textContent = 'RESUME';
+    btn.style.background = 'rgba(0,212,255,0.15)';
+    btn.style.color = 'var(--accent)';
+    clearTimeout(currentSceneTimer);
+    clearInterval(sessionTimer);
+  } else {
+    btn.textContent = 'PAUSE';
+    btn.style.background = '';
+    btn.style.color = '';
+    startTimers();
+    scheduleNextScene();
+  }
+}
+
+function endSession() {
+  // Stop everything
+  cancelAnimationFrame(animFrame);
+  clearTimeout(currentSceneTimer);
+  clearInterval(sessionTimer);
+  isPaused = false;
+
+  document.getElementById('pause-btn').textContent = 'PAUSE';
+  document.getElementById('pause-btn').style.background = '';
+  document.getElementById('pause-btn').style.color = '';
+
+  showScreen('setup');
+}
+
+// ===== UTILS =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== INIT =====
+window.addEventListener('resize', () => {
+  if (document.getElementById('training').classList.contains('active')) {
+    resizeCanvas();
+  }
+});
+
+// Prevent scroll on touch
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+initSwatches();
+resizeCanvas();
+</script>
+</body>
+</html>
