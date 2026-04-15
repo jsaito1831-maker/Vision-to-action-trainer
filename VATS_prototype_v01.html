@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<title>VATS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background:#0D1B2A;
+  color:#F0F4F8;
+  font-family:'DM Sans',sans-serif;
+  overflow:hidden;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+}
+
+/* ── SCREENS ── */
+#screen-setup, #screen-training {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+}
+
+#screen-training {
+  display:none;
+  background:#000;
+}
+
+/* ── SETUP ── */
+#screen-setup {
+  background:linear-gradient(160deg,#0D1B2A 0%,#0A2540 50%,#0D1B2A 100%);
+  overflow-y:auto;
+  padding:40px 28px 48px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+
+.logo { font-family:'Bebas Neue',sans-serif; font-size:48px; letter-spacing:4px; color:#00D4FF; line-height:1; }
+.logo-sub { font-size:10px; font-weight:500; letter-spacing:2px; color:#6B8099; text-transform:uppercase; margin-top:2px; margin-bottom:12px; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2);
+  border-radius:6px; padding:8px 14px; margin-bottom:24px;
+  font-size:12px; color:#F0F4F8; opacity:.85;
+}
+.badge b { color:#00D4FF; font-size:10px; letter-spacing:2px; text-transform:uppercase; }
+
+.sec-label {
+  font-size:10px; font-weight:600; letter-spacing:2.5px;
+  color:#6B8099; text-transform:uppercase;
+  margin-top:24px; margin-bottom:12px;
+}
+
+.color-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.color-group { display:flex; flex-direction:column; gap:8px; }
+.color-title { font-size:12px; font-weight:500; display:flex; align-items:center; gap:6px; }
+.dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.swatches { display:flex; gap:8px; flex-wrap:wrap; }
+.swatch {
+  width:34px; height:34px; border-radius:8px; cursor:pointer;
+  border:2px solid transparent; transition:border-color .15s, transform .1s;
+}
+.swatch.on { border-color:#fff; transform:scale(1.12); }
+
+.count-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.count-box { background:#1B2E42; border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+.count-title { font-size:12px; font-weight:500; display:flex; align-items:center; gap:6px; opacity:.8; }
+.count-ctrl { display:flex; align-items:center; justify-content:space-between; }
+.cbtn {
+  width:36px; height:36px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#fff; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.cbtn:active { background:rgba(255,255,255,.18); }
+.cnum { font-family:'Bebas Neue',sans-serif; font-size:30px; }
+
+.slider-group { display:flex; flex-direction:column; gap:18px; }
+.slider-row { display:flex; flex-direction:column; gap:8px; }
+.slider-hdr { display:flex; justify-content:space-between; align-items:baseline; }
+.slider-name { font-size:13px; font-weight:500; opacity:.85; }
+.slider-val { font-family:'Bebas Neue',sans-serif; font-size:22px; color:#00D4FF; }
+.slider-unit { font-size:11px; color:#6B8099; margin-left:2px; }
+input[type=range] {
+  -webkit-appearance:none; width:100%; height:4px;
+  border-radius:2px; background:#1B2E42; outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:22px; height:22px;
+  border-radius:50%; background:#00D4FF; cursor:pointer;
+  box-shadow:0 0 10px rgba(0,212,255,.45);
+}
+
+.var-tags { display:flex; flex-wrap:wrap; gap:8px; }
+.vtag {
+  background:rgba(0,212,255,.12); border:1px solid rgba(0,212,255,.25);
+  border-radius:20px; padding:5px 12px;
+  font-size:11px; font-weight:500; letter-spacing:.5px; color:#00D4FF;
+}
+
+.instr {
+  background:rgba(255,255,255,.04);
+  border-left:3px solid #00D4FF;
+  border-radius:0 8px 8px 0;
+  padding:14px 16px;
+}
+.instr p { font-size:13px; line-height:1.7; opacity:.75; }
+
+.start-btn {
+  margin-top:28px;
+  width:100%; height:60px;
+  background:#00D4FF; color:#0D1B2A;
+  border:none; border-radius:14px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px; letter-spacing:4px;
+  cursor:pointer;
+}
+.start-btn:active { opacity:.85; }
+
+/* ── TRAINING ── */
+#canvas {
+  position:absolute;
+  top:0; left:0;
+  display:block;
+}
+
+.hud {
+  position:absolute; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 20px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.65) 0%,transparent 100%);
+  pointer-events:none; z-index:10;
+}
+.hud-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; color:#00D4FF; }
+.hud-sub { font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,.4); text-transform:uppercase; margin-top:2px; }
+.hud-stats { display:flex; gap:14px; align-items:center; }
+.hud-stat { display:flex; flex-direction:column; align-items:center; }
+.hud-stat-v { font-family:'Bebas Neue',sans-serif; font-size:22px; color:#fff; line-height:1; }
+.hud-stat-l { font-size:9px; letter-spacing:1px; color:rgba(255,255,255,.35); text-transform:uppercase; }
+.hud-div { width:1px; height:26px; background:rgba(255,255,255,.1); }
+
+.tbar-wrap {
+  position:absolute; z-index:10;
+  left:20px; right:20px; bottom:80px;
+  height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden;
+}
+.tbar-fill { height:100%; background:#00D4FF; border-radius:2px; width:100%; }
+
+.btns {
+  position:absolute; bottom:0; left:0; right:0; z-index:10;
+  display:flex; justify-content:center; gap:14px;
+  padding:16px 24px 28px;
+  background:linear-gradient(to top,rgba(0,0,0,.65) 0%,transparent 100%);
+}
+.btn {
+  height:50px; border-radius:12px; border:none;
+  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px;
+  cursor:pointer; padding:0 28px;
+}
+.btn:active { opacity:.8; }
+.btn-pause { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.15); }
+.btn-end { background:rgba(255,69,96,.15); color:#FF4560; border:1px solid rgba(255,69,96,.25); }
+
+#cdo {
+  position:absolute; inset:0; z-index:20;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.72);
+}
+#cdo-num {
+  font-family:'Bebas Neue',sans-serif; font-size:160px;
+  color:#00D4FF; text-shadow:0 0 50px rgba(0,212,255,.35); line-height:1;
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="screen-setup">
+  <div class="logo">VATS</div>
+  <div class="logo-sub">Vision-Action Training System</div>
+
+  <div class="badge">
+    <b>アンカー</b>
+    <span style="color:#6B8099">|</span>
+    ① オールコートプレッシングへの対応
+  </div>
+
+  <div class="sec-label">カラー設定</div>
+  <div class="color-row">
+    <div class="color-group">
+      <div class="color-title"><span class="dot" id="td" style="background:#00E5A0"></span>味方カラー</div>
+      <div class="swatches" id="tsw">
+        <div class="swatch on" data-c="#00E5A0" style="background:#00E5A0"></div>
+        <div class="swatch" data-c="#00BFFF" style="background:#00BFFF"></div>
+        <div class="swatch" data-c="#FFD700" style="background:#FFD700"></div>
+        <div class="swatch" data-c="#FFFFFF" style="background:#fff;border-color:#555"></div>
+        <div class="swatch" data-c="#FF8C00" style="background:#FF8C00"></div>
+      </div>
+    </div>
+    <div class="color-group">
+      <div class="color-title"><span class="dot" id="od" style="background:#FF4560"></span>相手カラー</div>
+      <div class="swatches" id="osw">
+        <div class="swatch on" data-c="#FF4560" style="background:#FF4560"></div>
+        <div class="swatch" data-c="#FF2222" style="background:#FF2222"></div>
+        <div class="swatch" data-c="#FF6B35" style="background:#FF6B35"></div>
+        <div class="swatch" data-c="#CC44FF" style="background:#CC44FF"></div>
+        <div class="swatch" data-c="#FF1493" style="background:#FF1493"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">ブロック数</div>
+  <div class="count-row">
+    <div class="count-box">
+      <div class="count-title"><span class="dot" id="tcd" style="background:#00E5A0"></span>味方</div>
+      <div class="count-ctrl">
+        <button class="cbtn" onclick="chg('t',-1)">−</button>
+        <span class="cnum" id="tcn">3</span>
+        <button class="cbtn" onclick="chg('t',1)">＋</button>
+      </div>
+    </div>
+    <div class="count-box">
+      <div class="count-title"><span class="dot" id="ocd" style="background:#FF4560"></span>相手</div>
+      <div class="count-ctrl">
+        <button class="cbtn" onclick="chg('o',-1)">−</button>
+        <span class="cnum" id="ocn">4</span>
+        <button class="cbtn" onclick="chg('o',1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">タイミング設定</div>
+  <div class="slider-group">
+    <div class="slider-row">
+      <div class="slider-hdr">
+        <span class="slider-name">切り替わり時間</span>
+        <span><span class="slider-val" id="tv">2.0</span><span class="slider-unit">秒</span></span>
+      </div>
+      <input type="range" id="tslider" min="0.5" max="5" step="0.1" value="2.0"
+        oninput="document.getElementById('tv').textContent=parseFloat(this.value).toFixed(1)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-hdr">
+        <span class="slider-name">移動速度</span>
+        <span><span class="slider-val" id="sv">5</span></span>
+      </div>
+      <input type="range" id="sslider" min="1" max="10" step="1" value="5"
+        oninput="document.getElementById('sv').textContent=this.value">
+    </div>
+  </div>
+
+  <div class="sec-label">重要変数</div>
+  <div class="var-tags">
+    <span class="vtag">スキャニング頻度 ◎</span>
+    <span class="vtag">時間枠予期精度 ◎</span>
+    <span class="vtag">パターン認識 ◎</span>
+  </div>
+
+  <div class="sec-label">身体動作指示</div>
+  <div class="instr">
+    <p>CBからボールを受ける前に前後を確認し、プレッシャーが来る方向と逃げ道を把握してから、ワンタッチで逃がすかキープするかを決めてください。</p>
+  </div>
+
+  <button class="start-btn" id="startbtn">SESSION START</button>
+</div>
+
+<!-- TRAINING -->
+<div id="screen-training">
+  <canvas id="canvas"></canvas>
+  <div class="hud">
+    <div>
+      <div class="hud-title">VATS</div>
+      <div class="hud-sub">アンカー — ① オールコートプレス</div>
+    </div>
+    <div class="hud-stats">
+      <div class="hud-stat">
+        <span class="hud-stat-v" id="htrial">0</span>
+        <span class="hud-stat-l">試行</span>
+      </div>
+      <div class="hud-div"></div>
+      <div class="hud-stat">
+        <span class="hud-stat-v" id="htime">0:00</span>
+        <span class="hud-stat-l">経過</span>
+      </div>
+    </div>
+  </div>
+  <div class="tbar-wrap"><div class="tbar-fill" id="tbar"></div></div>
+  <div class="btns">
+    <button class="btn btn-pause" id="pausebtn">PAUSE</button>
+    <button class="btn btn-end" id="endbtn">終了</button>
+  </div>
+  <div id="cdo"><span id="cdo-num">3</span></div>
+</div>
+
+<script>
+// ── CONFIG ──
+const cfg = {
+  teamColor: '#00E5A0',
+  oppColor:  '#FF4560',
+  teamCount: 3,
+  oppCount:  4,
+  timing:    2.0,
+  speed:     5,
+};
+
+let blocks      = [];
+let raf         = null;
+let sessTimer   = null;
+let sessSeconds = 0;
+let trials      = 0;
+let paused      = false;
+let sceneTO     = null;
+
+const setupEl    = document.getElementById('screen-setup');
+const trainingEl = document.getElementById('screen-training');
+const canvas     = document.getElementById('canvas');
+const ctx        = canvas.getContext('2d');
+const cdoEl      = document.getElementById('cdo');
+const cdoNum     = document.getElementById('cdo-num');
+const tbar       = document.getElementById('tbar');
+const htrial     = document.getElementById('htrial');
+const htime      = document.getElementById('htime');
+const pauseBtn   = document.getElementById('pausebtn');
+const endBtn     = document.getElementById('endbtn');
+
+// ── SWATCHES ──
+['tsw','osw'].forEach(id => {
+  const isTeam = id === 'tsw';
+  document.querySelectorAll('#'+id+' .swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('#'+id+' .swatch').forEach(x => x.classList.remove('on'));
+      s.classList.add('on');
+      if (isTeam) {
+        cfg.teamColor = s.dataset.c;
+        document.getElementById('td').style.background  = cfg.teamColor;
+        document.getElementById('tcd').style.background = cfg.teamColor;
+      } else {
+        cfg.oppColor = s.dataset.c;
+        document.getElementById('od').style.background  = cfg.oppColor;
+        document.getElementById('ocd').style.background = cfg.oppColor;
+      }
+    });
+  });
+});
+
+// ── COUNT ──
+function chg(t, d) {
+  if (t === 't') { cfg.teamCount = Math.max(1,Math.min(8,cfg.teamCount+d)); document.getElementById('tcn').textContent = cfg.teamCount; }
+  else           { cfg.oppCount  = Math.max(1,Math.min(8,cfg.oppCount+d));  document.getElementById('ocn').textContent = cfg.oppCount; }
+}
+
+// ── CANVAS ──
+function resize() {
+  canvas.width  = trainingEl.clientWidth  || window.innerWidth;
+  canvas.height = trainingEl.clientHeight || window.innerHeight;
+}
+
+// ── BLOCK ──
+function makeBlock(isOpp, idx, total) {
+  const W = canvas.width, H = canvas.height;
+  const size = Math.min(W, H) * 0.16;
+  const spd  = (cfg.speed * 0.35 + 0.6) * (0.7 + Math.random() * 0.6);
+
+  // Vertical lanes: split screen into rows per team separately
+  const teamRows = cfg.teamCount;
+  const oppRows  = cfg.oppCount;
+
+  let y;
+  if (isOpp) {
+    // Opponent: upper half of screen, evenly distributed
+    const rowH = (H * 0.45) / oppRows;
+    y = rowH * idx + rowH * 0.5 + H * 0.02;
+  } else {
+    // Teammate: lower half of screen, evenly distributed
+    const rowH = (H * 0.45) / teamRows;
+    y = H * 0.5 + rowH * idx + rowH * 0.5;
+  }
+
+  const x = (W * 0.1) + Math.random() * (W * 0.8);
+  const b = { isOpp, color: isOpp ? cfg.oppColor : cfg.teamColor, size, spd, x, y, vx:0, vy:0, tx:x, ty:y };
+  setTarget(b);
+  return b;
+}
+
+function setTarget(b) {
+  const W = canvas.width;
+  const margin = b.size / 2 + 10;
+  b.tx = margin + Math.random() * (W - margin * 2);
+  b.ty = b.y; // horizontal only — vertical position never changes
+  const dx = b.tx - b.x;
+  b.vx = (dx >= 0 ? 1 : -1) * b.spd;
+  b.vy = 0;
+}
+
+function makeBlocks() {
+  blocks = [];
+  for (let i = 0; i < cfg.teamCount; i++) blocks.push(makeBlock(false, i, cfg.teamCount));
+  for (let i = 0; i < cfg.oppCount;  i++) blocks.push(makeBlock(true,  i, cfg.oppCount));
+}
+
+// ── DRAW ──
+function drawBlock(b) {
+  const s = b.size, r = s * 0.22;
+  const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, s);
+  g.addColorStop(0, b.color + '40');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(b.x, b.y, s, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(b.x - s/2, b.y - s/2, s, s, r);
+  ctx.fillStyle   = b.color + 'CC';
+  ctx.fill();
+  ctx.strokeStyle = b.color;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+}
+
+function frame() {
+  const W = canvas.width, H = canvas.height;
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#050D14'); bg.addColorStop(1,'#0A1929');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)'; ctx.lineWidth = 1;
+  for (let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for (let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  ctx.strokeStyle='rgba(0,212,255,0.06)'; ctx.setLineDash([8,8]);
+  ctx.beginPath();ctx.moveTo(0,H*0.5);ctx.lineTo(W,H*0.5);ctx.stroke();
+  ctx.setLineDash([]);
+
+  const px=W/2, py=H*0.82;
+  ctx.beginPath();ctx.arc(px,py,18,0,Math.PI*2);
+  ctx.strokeStyle='rgba(0,212,255,0.3)';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,212,255,0.5)';ctx.fill();
+  ctx.fillStyle='rgba(0,212,255,0.35)';
+  ctx.font='500 11px DM Sans';ctx.textAlign='center';
+  ctx.fillText('YOU',px,py+30);
+
+  if (!paused) {
+    blocks.forEach(b => {
+      b.x += b.vx;
+      // horizontal only — check x distance only
+      if (Math.abs(b.tx - b.x) < 8) setTarget(b);
+    });
+  }
+  blocks.forEach(drawBlock);
+  raf = requestAnimationFrame(frame);
+}
+
+// ── SCENE ──
+function startScene() {
+  const dur = cfg.timing * 1000;
+  tbar.style.transition = 'none';
+  tbar.style.width = '100%';
+  requestAnimationFrame(() => {
+    tbar.style.transition = `width ${dur}ms linear`;
+    tbar.style.width = '0%';
+  });
+  sceneTO = setTimeout(() => {
+    trials++;
+    htrial.textContent = trials;
+    blocks.forEach(b => {
+      if (Math.random() < 0.45) {
+        const W = canvas.width;
+        b.x = (b.size/2+10) + Math.random() * (W - b.size - 20);
+        // y stays fixed
+      }
+      setTarget(b);
+    });
+    startScene();
+  }, dur);
+}
+
+function startSessTimer() {
+  sessSeconds=0; trials=0; htrial.textContent=0;
+  clearInterval(sessTimer);
+  sessTimer = setInterval(() => {
+    sessSeconds++;
+    const m=Math.floor(sessSeconds/60), s=sessSeconds%60;
+    htime.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  },1000);
+}
+
+// ── START ──
+document.getElementById('startbtn').addEventListener('click', () => {
+  cfg.timing = parseFloat(document.getElementById('tslider').value);
+  cfg.speed  = parseInt(document.getElementById('sslider').value);
+
+  setupEl.style.display    = 'none';
+  trainingEl.style.display = 'block';
+
+  resize();
+  makeBlocks();
+
+  if (raf) cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(frame);
+
+  let c = 3;
+  cdoEl.style.display = 'flex';
+  cdoNum.textContent  = c;
+  const tick = setInterval(() => {
+    c--;
+    if (c <= 0) {
+      clearInterval(tick);
+      cdoEl.style.display = 'none';
+      startSessTimer();
+      startScene();
+    } else {
+      cdoNum.textContent = c;
+    }
+  }, 900);
+});
+
+// ── PAUSE ──
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  if (paused) {
+    pauseBtn.textContent  = 'RESUME';
+    pauseBtn.style.color  = '#00D4FF';
+    clearTimeout(sceneTO);
+    clearInterval(sessTimer);
+  } else {
+    pauseBtn.textContent = 'PAUSE';
+    pauseBtn.style.color = '';
+    startSessTimer();
+    startScene();
+  }
+});
+
+// ── END ──
+endBtn.addEventListener('click', () => {
+  cancelAnimationFrame(raf); raf=null;
+  clearTimeout(sceneTO);
+  clearInterval(sessTimer);
+  paused=false;
+  pauseBtn.textContent='PAUSE'; pauseBtn.style.color='';
+  trainingEl.style.display='none';
+  setupEl.style.display='block';
+});
+
+window.addEventListener('resize', () => {
+  if (trainingEl.style.display==='block') resize();
+});
+document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+</script>
+</body>
+</html>
