@@ -38,7 +38,89 @@ body {
   background:#000;
 }
 
-/* ── GUIDE ── */
+/* ── SITUATION SELECT ── */
+#screen-select {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  background:linear-gradient(160deg,#0D1B2A 0%,#0A2540 50%,#0D1B2A 100%);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  display:none;
+  flex-direction:column;
+  padding:36px 28px 48px;
+  gap:0;
+}
+
+.sel-header { margin-bottom:24px; }
+.sel-title { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:3px; color:#00D4FF; }
+.sel-sub { font-size:10px; letter-spacing:2px; color:#6B8099; text-transform:uppercase; margin-top:4px; }
+
+.sit-card {
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;
+  padding:16px 18px;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:background 0.15s, border-color 0.15s;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.sit-card:active { background:rgba(0,212,255,0.08); }
+.sit-card.selected {
+  background:rgba(0,212,255,0.1);
+  border-color:rgba(0,212,255,0.4);
+}
+
+.sit-num {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px;
+  color:#00D4FF;
+  opacity:0.4;
+  flex-shrink:0;
+  width:28px;
+  text-align:center;
+  line-height:1;
+}
+.sit-card.selected .sit-num { opacity:1; }
+
+.sit-info { flex:1; }
+.sit-name { font-size:13px; font-weight:500; color:#F0F4F8; line-height:1.4; }
+.sit-vars { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.sit-var {
+  font-size:10px;
+  padding:2px 8px;
+  border-radius:12px;
+  background:rgba(0,212,255,0.08);
+  border:1px solid rgba(0,212,255,0.15);
+  color:#00D4FF;
+  letter-spacing:0.3px;
+}
+
+.sit-arrow {
+  color:rgba(255,255,255,0.2);
+  font-size:18px;
+  flex-shrink:0;
+}
+.sit-card.selected .sit-arrow { color:#00D4FF; }
+
+.sel-btn {
+  margin-top:20px;
+  width:100%;
+  height:56px;
+  background:#00D4FF;
+  color:#0D1B2A;
+  border:none;
+  border-radius:12px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;
+  letter-spacing:3px;
+  cursor:pointer;
+}
+.sel-btn:active { opacity:0.85; }
 #screen-guide {
   background:linear-gradient(160deg,#0D1B2A 0%,#0A2540 50%,#0D1B2A 100%);
   overflow-y:auto;
@@ -288,6 +370,16 @@ input[type=range]::-webkit-slider-thumb {
   display:block;
 }
 
+/* UI auto-hide layer */
+.ui-layer {
+  transition: opacity 0.4s ease;
+  opacity: 1;
+}
+.ui-layer.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hud {
   position:absolute; top:0; left:0; right:0;
   display:flex; justify-content:space-between; align-items:center;
@@ -392,10 +484,11 @@ input[type=range]::-webkit-slider-thumb {
   <div class="logo">VATS</div>
   <div class="logo-sub">Vision-Action Training System</div>
 
-  <div class="badge">
-    <b>アンカー</b>
+  <div class="badge" id="sit-badge" onclick="showScreen('select')" style="cursor:pointer">
+    <b>センターバック</b>
     <span style="color:#6B8099">|</span>
     ① オールコートプレッシングへの対応
+    <span style="color:#00D4FF;font-size:11px;margin-left:4px">▼</span>
   </div>
 
   <div class="sec-label">カラー設定</div>
@@ -447,17 +540,17 @@ input[type=range]::-webkit-slider-thumb {
     <div class="slider-row">
       <div class="slider-hdr">
         <span class="slider-name">切り替わり時間</span>
-        <span><span class="slider-val" id="tv">2.0</span><span class="slider-unit">秒</span></span>
+        <span><span class="slider-val" id="tv">1.8</span><span class="slider-unit">秒</span></span>
       </div>
-      <input type="range" id="tslider" min="0.5" max="5" step="0.1" value="2.0"
+      <input type="range" id="tslider" min="0.5" max="5" step="0.1" value="1.8"
         oninput="document.getElementById('tv').textContent=parseFloat(this.value).toFixed(1)">
     </div>
     <div class="slider-row">
       <div class="slider-hdr">
         <span class="slider-name">移動速度</span>
-        <span><span class="slider-val" id="sv">5</span></span>
+        <span><span class="slider-val" id="sv">8</span></span>
       </div>
-      <input type="range" id="sslider" min="1" max="30" step="1" value="5"
+      <input type="range" id="sslider" min="1" max="30" step="1" value="8"
         oninput="document.getElementById('sv').textContent=this.value">
     </div>
   </div>
@@ -491,10 +584,22 @@ input[type=range]::-webkit-slider-thumb {
 
   <div class="sec-label">身体動作指示</div>
   <div class="instr">
-    <p>CBからボールを受ける前に前後を確認し、プレッシャーが来る方向と逃げ道を把握してから、ワンタッチで逃がすかキープするかを決めてください。</p>
+    <p>ボールを受ける前に左右を確認し、ディスプレイの情報でプレッシャー方向を把握してからパスコースを選択してください。</p>
   </div>
 
   <button class="start-btn" id="startbtn">SESSION START</button>
+</div>
+
+<!-- SITUATION SELECT -->
+<div id="screen-select">
+  <div class="sel-header">
+    <div class="sel-title">シチュエーション選択</div>
+    <div class="sel-sub">センターバック</div>
+  </div>
+
+  <div id="sit-list"></div>
+
+  <button class="sel-btn" id="selbtn">次へ →</button>
 </div>
 
 <!-- GUIDE -->
@@ -547,7 +652,7 @@ input[type=range]::-webkit-slider-thumb {
         <div class="guide-step-title">身体動作の指示</div>
         <div class="guide-step-desc">選手への指示内容を伝えてからセッションを開始してください。</div>
         <div class="guide-note" style="margin-top:8px">
-          <p>CBからボールを受ける<b>前に前後を確認</b>し、プレッシャーが来る方向と逃げ道を把握してから、<b>ワンタッチで逃がすかキープするか</b>を決めてください。</p>
+          <p>ボールを受ける<b>前に左右を確認</b>し、ディスプレイの情報でプレッシャー方向を把握してから、<b>パスコースを選択</b>してください。</p>
         </div>
       </div>
     </div>
@@ -578,59 +683,175 @@ input[type=range]::-webkit-slider-thumb {
 <!-- TRAINING -->
 <div id="screen-training">
   <canvas id="canvas"></canvas>
-  <div class="hud">
-    <div>
-      <div class="hud-title">VATS</div>
-      <div class="hud-sub">アンカー — ① オールコートプレス</div>
+
+  <div class="ui-layer" id="ui-layer">
+    <div class="hud">
+      <div>
+        <div class="hud-title">VATS</div>
+        <div class="hud-sub">センターバック — ① オールコートプレス</div>
+      </div>
+      <div class="hud-stats">
+        <div class="hud-stat">
+          <span class="hud-stat-v" id="htrial">0</span>
+          <span class="hud-stat-l">試行</span>
+        </div>
+        <div class="hud-div"></div>
+        <div class="hud-stat">
+          <span class="hud-stat-v" id="htime">0:00</span>
+          <span class="hud-stat-l">経過</span>
+        </div>
+      </div>
     </div>
-    <div class="hud-stats">
-      <div class="hud-stat">
-        <span class="hud-stat-v" id="htrial">0</span>
-        <span class="hud-stat-l">試行</span>
+
+    <!-- Realtime size panel -->
+    <div id="size-panel">
+      <div class="size-row">
+        <span class="size-label">横</span>
+        <input type="range" id="rt-bw" min="20" max="100" step="1" value="90"
+          oninput="onRtBw(this.value)">
+        <span class="size-num" id="rt-bwv">90%</span>
       </div>
-      <div class="hud-div"></div>
-      <div class="hud-stat">
-        <span class="hud-stat-v" id="htime">0:00</span>
-        <span class="hud-stat-l">経過</span>
+      <div class="size-row">
+        <span class="size-label">縦</span>
+        <input type="range" id="rt-bh" min="10" max="100" step="1" value="90"
+          oninput="onRtBh(this.value)">
+        <span class="size-num" id="rt-bhv">90%</span>
       </div>
+    </div>
+
+    <div class="tbar-wrap"><div class="tbar-fill" id="tbar"></div></div>
+
+    <div class="btns">
+      <button class="btn btn-pause" id="pausebtn">PAUSE</button>
+      <button class="btn btn-end" id="endbtn">終了</button>
     </div>
   </div>
 
-  <!-- Realtime size panel -->
-  <div id="size-panel">
-    <div class="size-row">
-      <span class="size-label">横</span>
-      <input type="range" id="rt-bw" min="20" max="100" step="1" value="90"
-        oninput="onRtBw(this.value)">
-      <span class="size-num" id="rt-bwv">90%</span>
-    </div>
-    <div class="size-row">
-      <span class="size-label">縦</span>
-      <input type="range" id="rt-bh" min="10" max="100" step="1" value="90"
-        oninput="onRtBh(this.value)">
-      <span class="size-num" id="rt-bhv">90%</span>
-    </div>
-  </div>
-
-  <div class="tbar-wrap"><div class="tbar-fill" id="tbar"></div></div>
-  <div class="btns">
-    <button class="btn btn-pause" id="pausebtn">PAUSE</button>
-    <button class="btn btn-end" id="endbtn">終了</button>
-  </div>
   <div id="cdo"><span id="cdo-num">3</span></div>
 </div>
 
 <script>
+// ── SITUATIONS ──
+const SITUATIONS = [
+  {
+    id: 1,
+    name: "① オールコートプレッシングへの対応",
+    vars: ["スキャニング頻度 ◎", "時間枠予期精度 ◎", "パターン認識 ◎"],
+    cfg: { teamCount:2, oppCount:4, timing:1.8, speed:8 },
+    guide: {
+      display1: "1台：正面中央 0°",
+      display2: "2台：正面左 45° ＋ 正面右 45°",
+      ballFrom: "背後正面（GKからのパスを想定）",
+      instruction: "ボールを受ける<b>前に左右を確認</b>し、ディスプレイの情報でプレッシャー方向を把握してから、<b>パスコースを選択</b>してください。",
+    }
+  },
+  {
+    id: 3,
+    name: "③ 引いた相手へのビルドアップ",
+    vars: ["時間的認知 ◎", "周辺視 ○", "不確実性耐性 ○"],
+    cfg: { teamCount:3, oppCount:3, timing:3.5, speed:4 },
+    guide: {
+      display1: "1台：正面中央 0°（ブロックの動きを優先）",
+      display2: "2台：正面中央 0° ＋ 斜め前方 60°",
+      ballFrom: "斜め後方（サイドバックからのリターンパスを想定）",
+      instruction: "急がず<b>相手ブロックの動き</b>を観察しながら、味方がブロック間に入るタイミングを待って<b>縦パスまたはサイド展開</b>を選択してください。",
+    }
+  },
+];
+
+let currentSitIdx = 0;
+
+function initSituationList() {
+  const list = document.getElementById('sit-list');
+  list.innerHTML = '';
+  SITUATIONS.forEach((sit, i) => {
+    const card = document.createElement('div');
+    card.className = 'sit-card' + (i === 0 ? ' selected' : '');
+    card.innerHTML = `
+      <div class="sit-num">${sit.id}</div>
+      <div class="sit-info">
+        <div class="sit-name">${sit.name.replace(/^[①③]\s/, '')}</div>
+        <div class="sit-vars">${sit.vars.map(v=>`<span class="sit-var">${v}</span>`).join('')}</div>
+      </div>
+      <div class="sit-arrow">›</div>
+    `;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.sit-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      currentSitIdx = i;
+    });
+    list.appendChild(card);
+  });
+}
+
+function applyCurrentSituation() {
+  const sit = SITUATIONS[currentSitIdx];
+
+  // Apply cfg defaults
+  cfg.teamCount = sit.cfg.teamCount;
+  cfg.oppCount  = sit.cfg.oppCount;
+  cfg.timing    = sit.cfg.timing;
+  cfg.speed     = sit.cfg.speed;
+
+  // Update sliders
+  document.getElementById('tslider').value = cfg.timing;
+  document.getElementById('tv').textContent = cfg.timing.toFixed(1);
+  document.getElementById('sslider').value = cfg.speed;
+  document.getElementById('sv').textContent = cfg.speed;
+  document.getElementById('tcn').textContent = cfg.teamCount;
+  document.getElementById('ocn').textContent = cfg.oppCount;
+
+  // Update badge
+  document.querySelector('.badge').innerHTML =
+    `<b>センターバック</b><span style="color:#6B8099">|</span>${sit.name}`;
+
+  // Update var tags
+  document.querySelector('.var-tags').innerHTML =
+    sit.vars.map(v=>`<span class="vtag">${v}</span>`).join('');
+
+  // Update instruction
+  document.querySelector('.instr p').innerHTML = sit.guide.instruction.replace(/<b>/g,'').replace(/<\/b>/g,'');
+
+  // Update HUD
+  document.querySelector('.hud-sub').textContent =
+    `センターバック — ${sit.name}`;
+
+  // Update guide screen
+  updateGuideScreen(sit);
+}
+
+function updateGuideScreen(sit) {
+  const tags = document.querySelectorAll('.guide-step-tag');
+  // Step 2: display tags (index 0,1)
+  if (tags[0]) tags[0].textContent = sit.guide.display1;
+  if (tags[1]) tags[1].textContent = sit.guide.display2;
+  // Step 3: ball from (index 2)
+  if (tags[2]) tags[2].textContent = 'ボール出し：' + sit.guide.ballFrom.split('（')[0];
+
+  // Instruction
+  const noteP = document.querySelector('.guide-note p');
+  if (noteP) noteP.innerHTML = sit.guide.instruction;
+
+  // Var tags in guide
+  const guideVarDiv = document.querySelector('#screen-guide .guide-step:last-child div[style]');
+  if (guideVarDiv) {
+    guideVarDiv.innerHTML = sit.vars.map(v=>
+      `<div class="guide-step-tag">${v}</div>`
+    ).join('');
+  }
+}
+
 // ── CONFIG ──
+// CB × ① オールコートプレッシング デフォルト値
 const cfg = {
   teamColor: '#00E5A0',
   oppColor:  '#FF4560',
-  teamCount: 3,
-  oppCount:  4,
-  timing:    2.0,
-  speed:     5,
-  blockW:    0.90, // ratio of zone width
-  blockH:    0.90, // ratio of screen height
+  teamCount: 2, // サイドバック×2を表現
+  oppCount:  4, // 高密度プレッシャー
+  timing:    1.8,
+  speed:     8,
+  blockW:    0.90,
+  blockH:    0.90,
 };
 
 let blocks      = [];
@@ -840,9 +1061,36 @@ function startSessTimer() {
 // ── START ──
 // ── SCREEN HELPER ──
 function showScreen(id) {
-  document.getElementById('screen-setup').style.display   = id === 'setup'    ? 'flex'  : 'none';
-  document.getElementById('screen-guide').style.display   = id === 'guide'    ? 'flex'  : 'none';
-  document.getElementById('screen-training').style.display = id === 'training' ? 'block' : 'none';
+  ['setup','select','guide','training'].forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (!el) return;
+    if (s === 'training') {
+      el.style.display = id === s ? 'block' : 'none';
+    } else {
+      el.style.display = id === s ? 'flex' : 'none';
+    }
+  });
+}
+
+// ── UI AUTO-HIDE ──
+let uiHideTimer = null;
+const uiLayer = document.getElementById('ui-layer');
+
+function showUI() {
+  uiLayer.classList.remove('hidden');
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(() => {
+    uiLayer.classList.add('hidden');
+  }, 3000);
+}
+
+function initUIAutoHide() {
+  const el = document.getElementById('screen-training');
+  el.addEventListener('touchstart', showUI, { passive: true });
+  el.addEventListener('touchmove',  showUI, { passive: true });
+  el.addEventListener('click',      showUI);
+  // Show initially
+  showUI();
 }
 
 // ── REALTIME SIZE ──
@@ -877,6 +1125,12 @@ document.getElementById('startbtn').addEventListener('click', () => {
   showScreen('guide');
 });
 
+// Select screen next button
+document.getElementById('selbtn').addEventListener('click', () => {
+  applyCurrentSituation();
+  showScreen('setup');
+});
+
 // Guide START → actual session
 document.getElementById('guidestartbtn').addEventListener('click', () => {
   launchSession();
@@ -886,6 +1140,7 @@ function launchSession() {
   showScreen('training');
   resize();
   makeBlocks();
+  initUIAutoHide();
 
   if (raf) cancelAnimationFrame(raf);
   raf = requestAnimationFrame(frame);
@@ -937,6 +1192,11 @@ window.addEventListener('resize', () => {
 });
 // Only prevent touchmove on training screen (not setup)
 trainingEl.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+
+// ── INIT ──
+initSituationList();
+applyCurrentSituation();
+showScreen('select');
 </script>
 </body>
 </html>
