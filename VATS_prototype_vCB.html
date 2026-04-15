@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+<title>VATS</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background:#0D1B2A;
+  color:#F0F4F8;
+  font-family:'DM Sans',sans-serif;
+  overflow:hidden;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+}
+
+/* ── SCREENS ── */
+#screen-setup, #screen-guide, #screen-training {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  touch-action:pan-y;
+}
+
+#screen-training {
+  touch-action:none;
+}
+
+#screen-training, #screen-guide {
+  display:none;
+  background:#000;
+}
+
+/* ── GUIDE ── */
+#screen-guide {
+  background:linear-gradient(160deg,#0D1B2A 0%,#0A2540 50%,#0D1B2A 100%);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  display:flex;
+  flex-direction:column;
+  padding:0;
+}
+
+.guide-header {
+  padding:36px 28px 20px;
+  border-bottom:1px solid rgba(0,212,255,0.1);
+}
+
+.guide-title {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:32px;
+  letter-spacing:3px;
+  color:#00D4FF;
+  line-height:1;
+}
+
+.guide-sub {
+  font-size:11px;
+  letter-spacing:1.5px;
+  color:#6B8099;
+  text-transform:uppercase;
+  margin-top:4px;
+}
+
+.guide-body {
+  padding:24px 28px 32px;
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+  flex:1;
+}
+
+.guide-step {
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+}
+
+.guide-step-num {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:36px;
+  color:#00D4FF;
+  line-height:1;
+  opacity:0.4;
+  flex-shrink:0;
+  width:32px;
+  text-align:center;
+}
+
+.guide-step-content {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  flex:1;
+}
+
+.guide-step-title {
+  font-size:14px;
+  font-weight:600;
+  color:#F0F4F8;
+  letter-spacing:0.3px;
+}
+
+.guide-step-desc {
+  font-size:12px;
+  line-height:1.7;
+  color:#6B8099;
+}
+
+.guide-step-tag {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  background:rgba(0,212,255,0.08);
+  border:1px solid rgba(0,212,255,0.15);
+  border-radius:5px;
+  padding:4px 10px;
+  font-size:11px;
+  color:#00D4FF;
+  margin-top:4px;
+  width:fit-content;
+}
+
+.guide-divider {
+  height:1px;
+  background:rgba(255,255,255,0.05);
+  margin:0;
+}
+
+.guide-note {
+  background:rgba(255,255,255,0.03);
+  border-left:3px solid rgba(0,212,255,0.3);
+  border-radius:0 8px 8px 0;
+  padding:12px 16px;
+}
+
+.guide-note p {
+  font-size:12px;
+  line-height:1.7;
+  color:#6B8099;
+}
+
+.guide-note p b {
+  color:#F0F4F8;
+  font-weight:500;
+}
+
+.guide-btns {
+  padding:20px 28px 40px;
+  display:flex;
+  gap:12px;
+}
+
+.guide-btn-back {
+  height:56px;
+  flex:0 0 80px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06);
+  color:#F0F4F8;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;
+  letter-spacing:2px;
+  cursor:pointer;
+}
+
+.guide-btn-start {
+  height:56px;
+  flex:1;
+  border-radius:12px;
+  border:none;
+  background:#00D4FF;
+  color:#0D1B2A;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;
+  letter-spacing:3px;
+  cursor:pointer;
+}
+
+.guide-btn-back:active, .guide-btn-start:active { opacity:0.82; }
+
+/* ── SETUP ── */
+#screen-setup {
+  background:linear-gradient(160deg,#0D1B2A 0%,#0A2540 50%,#0D1B2A 100%);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:40px 28px 48px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+
+.logo { font-family:'Bebas Neue',sans-serif; font-size:48px; letter-spacing:4px; color:#00D4FF; line-height:1; }
+.logo-sub { font-size:10px; font-weight:500; letter-spacing:2px; color:#6B8099; text-transform:uppercase; margin-top:2px; margin-bottom:12px; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2);
+  border-radius:6px; padding:8px 14px; margin-bottom:24px;
+  font-size:12px; color:#F0F4F8; opacity:.85;
+}
+.badge b { color:#00D4FF; font-size:10px; letter-spacing:2px; text-transform:uppercase; }
+
+.sec-label {
+  font-size:10px; font-weight:600; letter-spacing:2.5px;
+  color:#6B8099; text-transform:uppercase;
+  margin-top:24px; margin-bottom:12px;
+}
+
+.color-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.color-group { display:flex; flex-direction:column; gap:8px; }
+.color-title { font-size:12px; font-weight:500; display:flex; align-items:center; gap:6px; }
+.dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.swatches { display:flex; gap:8px; flex-wrap:wrap; }
+.swatch {
+  width:34px; height:34px; border-radius:8px; cursor:pointer;
+  border:2px solid transparent; transition:border-color .15s, transform .1s;
+}
+.swatch.on { border-color:#fff; transform:scale(1.12); }
+
+.count-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.count-box { background:#1B2E42; border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+.count-title { font-size:12px; font-weight:500; display:flex; align-items:center; gap:6px; opacity:.8; }
+.count-ctrl { display:flex; align-items:center; justify-content:space-between; }
+.cbtn {
+  width:36px; height:36px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:#fff; font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.cbtn:active { background:rgba(255,255,255,.18); }
+.cnum { font-family:'Bebas Neue',sans-serif; font-size:30px; }
+
+.slider-group { display:flex; flex-direction:column; gap:18px; }
+.slider-row { display:flex; flex-direction:column; gap:8px; }
+.slider-hdr { display:flex; justify-content:space-between; align-items:baseline; }
+.slider-name { font-size:13px; font-weight:500; opacity:.85; }
+.slider-val { font-family:'Bebas Neue',sans-serif; font-size:22px; color:#00D4FF; }
+.slider-unit { font-size:11px; color:#6B8099; margin-left:2px; }
+input[type=range] {
+  -webkit-appearance:none; width:100%; height:4px;
+  border-radius:2px; background:#1B2E42; outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:22px; height:22px;
+  border-radius:50%; background:#00D4FF; cursor:pointer;
+  box-shadow:0 0 10px rgba(0,212,255,.45);
+}
+
+.var-tags { display:flex; flex-wrap:wrap; gap:8px; }
+.vtag {
+  background:rgba(0,212,255,.12); border:1px solid rgba(0,212,255,.25);
+  border-radius:20px; padding:5px 12px;
+  font-size:11px; font-weight:500; letter-spacing:.5px; color:#00D4FF;
+}
+
+.instr {
+  background:rgba(255,255,255,.04);
+  border-left:3px solid #00D4FF;
+  border-radius:0 8px 8px 0;
+  padding:14px 16px;
+}
+.instr p { font-size:13px; line-height:1.7; opacity:.75; }
+
+.start-btn {
+  margin-top:28px;
+  width:100%; height:60px;
+  background:#00D4FF; color:#0D1B2A;
+  border:none; border-radius:14px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px; letter-spacing:4px;
+  cursor:pointer;
+}
+.start-btn:active { opacity:.85; }
+
+/* ── TRAINING ── */
+#canvas {
+  position:absolute;
+  top:0; left:0;
+  display:block;
+}
+
+.hud {
+  position:absolute; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 20px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.65) 0%,transparent 100%);
+  pointer-events:none; z-index:10;
+}
+.hud-title { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px; color:#00D4FF; }
+.hud-sub { font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,.4); text-transform:uppercase; margin-top:2px; }
+.hud-stats { display:flex; gap:14px; align-items:center; }
+.hud-stat { display:flex; flex-direction:column; align-items:center; }
+.hud-stat-v { font-family:'Bebas Neue',sans-serif; font-size:22px; color:#fff; line-height:1; }
+.hud-stat-l { font-size:9px; letter-spacing:1px; color:rgba(255,255,255,.35); text-transform:uppercase; }
+.hud-div { width:1px; height:26px; background:rgba(255,255,255,.1); }
+
+.tbar-wrap {
+  position:absolute; z-index:10;
+  left:20px; right:20px; bottom:80px;
+  height:3px; background:rgba(255,255,255,.08); border-radius:2px; overflow:hidden;
+}
+.tbar-fill { height:100%; background:#00D4FF; border-radius:2px; width:100%; }
+
+.btns {
+  position:absolute; bottom:0; left:0; right:0; z-index:10;
+  display:flex; justify-content:center; gap:14px;
+  padding:16px 24px 28px;
+  background:linear-gradient(to top,rgba(0,0,0,.65) 0%,transparent 100%);
+}
+.btn {
+  height:50px; border-radius:12px; border:none;
+  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:2px;
+  cursor:pointer; padding:0 28px;
+}
+.btn:active { opacity:.8; }
+.btn-pause { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.15); }
+.btn-end { background:rgba(255,69,96,.15); color:#FF4560; border:1px solid rgba(255,69,96,.25); }
+
+#cdo {
+  position:absolute; inset:0; z-index:20;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.72);
+}
+#cdo-num {
+  font-family:'Bebas Neue',sans-serif; font-size:160px;
+  color:#00D4FF; text-shadow:0 0 50px rgba(0,212,255,.35); line-height:1;
+}
+
+/* Size panel */
+#size-panel {
+  position:absolute;
+  right:0; top:50%;
+  transform:translateY(-50%);
+  z-index:10;
+  background:rgba(13,27,42,0.85);
+  border-left:1px solid rgba(0,212,255,0.15);
+  padding:14px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  width:130px;
+}
+.size-row {
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.size-label {
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:1.5px;
+  color:#6B8099;
+  text-transform:uppercase;
+}
+.size-num {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;
+  color:#00D4FF;
+  text-align:right;
+}
+#size-panel input[type=range] {
+  -webkit-appearance:none;
+  width:100%; height:4px;
+  border-radius:2px;
+  background:#1B2E42;
+  outline:none;
+  cursor:pointer;
+}
+#size-panel input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  width:18px; height:18px;
+  border-radius:50%;
+  background:#00D4FF;
+  cursor:pointer;
+  box-shadow:0 0 8px rgba(0,212,255,.4);
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="screen-setup">
+  <div class="logo">VATS</div>
+  <div class="logo-sub">Vision-Action Training System</div>
+
+  <div class="badge">
+    <b>センターバック</b>
+    <span style="color:#6B8099">|</span>
+    ① オールコートプレッシングへの対応
+  </div>
+
+  <div class="sec-label">カラー設定</div>
+  <div class="color-row">
+    <div class="color-group">
+      <div class="color-title"><span class="dot" id="td" style="background:#00E5A0"></span>味方カラー</div>
+      <div class="swatches" id="tsw">
+        <div class="swatch on" data-c="#00E5A0" style="background:#00E5A0"></div>
+        <div class="swatch" data-c="#00BFFF" style="background:#00BFFF"></div>
+        <div class="swatch" data-c="#FFD700" style="background:#FFD700"></div>
+        <div class="swatch" data-c="#FFFFFF" style="background:#fff;border-color:#555"></div>
+        <div class="swatch" data-c="#FF8C00" style="background:#FF8C00"></div>
+      </div>
+    </div>
+    <div class="color-group">
+      <div class="color-title"><span class="dot" id="od" style="background:#FF4560"></span>相手カラー</div>
+      <div class="swatches" id="osw">
+        <div class="swatch on" data-c="#FF4560" style="background:#FF4560"></div>
+        <div class="swatch" data-c="#FF2222" style="background:#FF2222"></div>
+        <div class="swatch" data-c="#FF6B35" style="background:#FF6B35"></div>
+        <div class="swatch" data-c="#CC44FF" style="background:#CC44FF"></div>
+        <div class="swatch" data-c="#FF1493" style="background:#FF1493"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">ブロック数</div>
+  <div class="count-row">
+    <div class="count-box">
+      <div class="count-title"><span class="dot" id="tcd" style="background:#00E5A0"></span>味方</div>
+      <div class="count-ctrl">
+        <button class="cbtn" onclick="chg('t',-1)">−</button>
+        <span class="cnum" id="tcn">3</span>
+        <button class="cbtn" onclick="chg('t',1)">＋</button>
+      </div>
+    </div>
+    <div class="count-box">
+      <div class="count-title"><span class="dot" id="ocd" style="background:#FF4560"></span>相手</div>
+      <div class="count-ctrl">
+        <button class="cbtn" onclick="chg('o',-1)">−</button>
+        <span class="cnum" id="ocn">4</span>
+        <button class="cbtn" onclick="chg('o',1)">＋</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label">タイミング設定</div>
+  <div class="slider-group">
+    <div class="slider-row">
+      <div class="slider-hdr">
+        <span class="slider-name">切り替わり時間</span>
+        <span><span class="slider-val" id="tv">1.8</span><span class="slider-unit">秒</span></span>
+      </div>
+      <input type="range" id="tslider" min="0.5" max="5" step="0.1" value="1.8"
+        oninput="document.getElementById('tv').textContent=parseFloat(this.value).toFixed(1)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-hdr">
+        <span class="slider-name">移動速度</span>
+        <span><span class="slider-val" id="sv">8</span></span>
+      </div>
+      <input type="range" id="sslider" min="1" max="30" step="1" value="8"
+        oninput="document.getElementById('sv').textContent=this.value">
+    </div>
+  </div>
+
+  <div class="sec-label">ブロックサイズ</div>
+  <div class="slider-group">
+    <div class="slider-row">
+      <div class="slider-hdr">
+        <span class="slider-name">横幅</span>
+        <span><span class="slider-val" id="bwv">90</span><span class="slider-unit">%</span></span>
+      </div>
+      <input type="range" id="bwslider" min="20" max="100" step="1" value="90"
+        oninput="document.getElementById('bwv').textContent=this.value">
+    </div>
+    <div class="slider-row">
+      <div class="slider-hdr">
+        <span class="slider-name">縦幅</span>
+        <span><span class="slider-val" id="bhv">90</span><span class="slider-unit">%</span></span>
+      </div>
+      <input type="range" id="bhslider" min="10" max="100" step="1" value="90"
+        oninput="document.getElementById('bhv').textContent=this.value">
+    </div>
+  </div>
+
+  <div class="sec-label">重要変数</div>
+  <div class="var-tags">
+    <span class="vtag">スキャニング頻度 ◎</span>
+    <span class="vtag">時間枠予期精度 ◎</span>
+    <span class="vtag">パターン認識 ◎</span>
+  </div>
+
+  <div class="sec-label">身体動作指示</div>
+  <div class="instr">
+    <p>ボールを受ける前に左右を確認し、ディスプレイの情報でプレッシャー方向を把握してからパスコースを選択してください。</p>
+  </div>
+
+  <button class="start-btn" id="startbtn">SESSION START</button>
+</div>
+
+<!-- GUIDE -->
+<div id="screen-guide">
+  <div class="guide-header">
+    <div class="guide-title">セットアップ</div>
+    <div class="guide-sub">トレーニング開始前の準備</div>
+  </div>
+
+  <div class="guide-body">
+
+    <div class="guide-step">
+      <div class="guide-step-num">1</div>
+      <div class="guide-step-content">
+        <div class="guide-step-title">デバイスの準備</div>
+        <div class="guide-step-desc">iPadを三脚に固定してください。画面は縦向きを推奨します。複数台使用する場合は同じURLを各デバイスで開いてください。</div>
+        <div class="guide-step-tag">推奨：1〜2台</div>
+      </div>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-step">
+      <div class="guide-step-num">2</div>
+      <div class="guide-step-content">
+        <div class="guide-step-title">ディスプレイの配置角度</div>
+        <div class="guide-step-desc">このシチュエーション（オールコートプレッシング）の推奨配置は以下の通りです。</div>
+        <div class="guide-step-tag">1台：正面中央 0°</div>
+        <div class="guide-step-tag" style="margin-top:6px">2台：正面左 45° ＋ 正面右 45°</div>
+        <div class="guide-step-desc" style="margin-top:8px">ディスプレイの高さは選手の目線の高さに合わせてください。</div>
+      </div>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-step">
+      <div class="guide-step-num">3</div>
+      <div class="guide-step-content">
+        <div class="guide-step-title">ボール出しの設定</div>
+        <div class="guide-step-desc">ボールは<b>背後正面（GKからのパスを想定）</b>から出してください。壁パスまたはパス出し役が必要です。</div>
+        <div class="guide-step-tag">ボール出し：背後正面</div>
+      </div>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-step">
+      <div class="guide-step-num">4</div>
+      <div class="guide-step-content">
+        <div class="guide-step-title">身体動作の指示</div>
+        <div class="guide-step-desc">選手への指示内容を伝えてからセッションを開始してください。</div>
+        <div class="guide-note" style="margin-top:8px">
+          <p>ボールを受ける<b>前に左右を確認</b>し、ディスプレイの情報でプレッシャー方向を把握してから、<b>パスコースを選択</b>してください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="guide-divider"></div>
+
+    <div class="guide-step">
+      <div class="guide-step-num">5</div>
+      <div class="guide-step-content">
+        <div class="guide-step-title">重要変数（このセッションの目的）</div>
+        <div class="guide-step-desc">以下の変数に負荷をかけます。選手自身に意識させると効果的です。</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          <div class="guide-step-tag">スキャニング頻度 ◎</div>
+          <div class="guide-step-tag">時間枠予期精度 ◎</div>
+          <div class="guide-step-tag">パターン認識 ◎</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="guide-btns">
+    <button class="guide-btn-back" onclick="showScreen('setup')">戻る</button>
+    <button class="guide-btn-start" id="guidestartbtn">開始する</button>
+  </div>
+</div>
+
+<!-- TRAINING -->
+<div id="screen-training">
+  <canvas id="canvas"></canvas>
+  <div class="hud">
+    <div>
+      <div class="hud-title">VATS</div>
+      <div class="hud-sub">センターバック — ① オールコートプレス</div>
+    </div>
+    <div class="hud-stats">
+      <div class="hud-stat">
+        <span class="hud-stat-v" id="htrial">0</span>
+        <span class="hud-stat-l">試行</span>
+      </div>
+      <div class="hud-div"></div>
+      <div class="hud-stat">
+        <span class="hud-stat-v" id="htime">0:00</span>
+        <span class="hud-stat-l">経過</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Realtime size panel -->
+  <div id="size-panel">
+    <div class="size-row">
+      <span class="size-label">横</span>
+      <input type="range" id="rt-bw" min="20" max="100" step="1" value="90"
+        oninput="onRtBw(this.value)">
+      <span class="size-num" id="rt-bwv">90%</span>
+    </div>
+    <div class="size-row">
+      <span class="size-label">縦</span>
+      <input type="range" id="rt-bh" min="10" max="100" step="1" value="90"
+        oninput="onRtBh(this.value)">
+      <span class="size-num" id="rt-bhv">90%</span>
+    </div>
+  </div>
+
+  <div class="tbar-wrap"><div class="tbar-fill" id="tbar"></div></div>
+  <div class="btns">
+    <button class="btn btn-pause" id="pausebtn">PAUSE</button>
+    <button class="btn btn-end" id="endbtn">終了</button>
+  </div>
+  <div id="cdo"><span id="cdo-num">3</span></div>
+</div>
+
+<script>
+// ── CONFIG ──
+// CB × ① オールコートプレッシング デフォルト値
+const cfg = {
+  teamColor: '#00E5A0',
+  oppColor:  '#FF4560',
+  teamCount: 2, // サイドバック×2を表現
+  oppCount:  4, // 高密度プレッシャー
+  timing:    1.8,
+  speed:     8,
+  blockW:    0.90,
+  blockH:    0.90,
+};
+
+let blocks      = [];
+let raf         = null;
+let sessTimer   = null;
+let sessSeconds = 0;
+let trials      = 0;
+let paused      = false;
+let sceneTO     = null;
+
+const setupEl    = document.getElementById('screen-setup');
+const trainingEl = document.getElementById('screen-training');
+const canvas     = document.getElementById('canvas');
+const ctx        = canvas.getContext('2d');
+const cdoEl      = document.getElementById('cdo');
+const cdoNum     = document.getElementById('cdo-num');
+const tbar       = document.getElementById('tbar');
+const htrial     = document.getElementById('htrial');
+const htime      = document.getElementById('htime');
+const pauseBtn   = document.getElementById('pausebtn');
+const endBtn     = document.getElementById('endbtn');
+
+// ── SWATCHES ──
+['tsw','osw'].forEach(id => {
+  const isTeam = id === 'tsw';
+  document.querySelectorAll('#'+id+' .swatch').forEach(s => {
+    s.addEventListener('click', () => {
+      document.querySelectorAll('#'+id+' .swatch').forEach(x => x.classList.remove('on'));
+      s.classList.add('on');
+      if (isTeam) {
+        cfg.teamColor = s.dataset.c;
+        document.getElementById('td').style.background  = cfg.teamColor;
+        document.getElementById('tcd').style.background = cfg.teamColor;
+      } else {
+        cfg.oppColor = s.dataset.c;
+        document.getElementById('od').style.background  = cfg.oppColor;
+        document.getElementById('ocd').style.background = cfg.oppColor;
+      }
+    });
+  });
+});
+
+// ── COUNT ──
+function chg(t, d) {
+  if (t === 't') { cfg.teamCount = Math.max(1,Math.min(8,cfg.teamCount+d)); document.getElementById('tcn').textContent = cfg.teamCount; }
+  else           { cfg.oppCount  = Math.max(1,Math.min(8,cfg.oppCount+d));  document.getElementById('ocn').textContent = cfg.oppCount; }
+}
+
+// ── CANVAS ──
+function resize() {
+  canvas.width  = trainingEl.clientWidth  || window.innerWidth;
+  canvas.height = trainingEl.clientHeight || window.innerHeight;
+}
+
+// ── BLOCK ──
+// Zone = vertical column. Total zones = teamCount + oppCount.
+// Each block starts in its zone, can move anywhere horizontally.
+
+function calcZone(idx, total) {
+  const W = canvas.width, H = canvas.height;
+  const zoneW = W / total;
+  const bw    = zoneW * cfg.blockW;
+  const bh    = H * cfg.blockH;
+  const pad   = (zoneW - bw) / 2;
+  const cx    = zoneW * idx + zoneW / 2;
+  const cy    = H / 2;
+  return { zoneW, pad, bw, bh, cx, cy };
+}
+
+function makeBlock(isOpp, zoneIdx, totalZones) {
+  const { zoneW, pad, bw, bh, cx, cy } = calcZone(zoneIdx, totalZones);
+  const spd = cfg.speed * 1.5 * (0.8 + Math.random() * 0.4);
+  const b = {
+    isOpp,
+    color: isOpp ? cfg.oppColor : cfg.teamColor,
+    bw, bh, pad,
+    totalZones,
+    spd,
+    x: cx, y: cy,
+    vx: 0, vy: 0,
+    tx: cx, ty: cy,
+  };
+  setTarget(b);
+  return b;
+}
+
+function setTarget(b) {
+  const W = canvas.width;
+  // Can move anywhere across full screen width
+  const margin = b.bw / 2 + b.pad;
+  b.tx = margin + Math.random() * (W - margin * 2);
+  b.ty = b.y; // vertical fixed
+  const dx = b.tx - b.x;
+  b.vx = (dx >= 0 ? 1 : -1) * b.spd;
+  b.vy = 0;
+}
+
+function randomX(b) {
+  const W = canvas.width;
+  const margin = b.bw / 2 + b.pad;
+  return margin + Math.random() * (W - margin * 2);
+}
+
+function makeBlocks() {
+  const total = cfg.teamCount + cfg.oppCount;
+
+  // Shuffle zone indices so team/opp are mixed
+  const zones = Array.from({length: total}, (_, i) => i);
+  for (let i = zones.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [zones[i], zones[j]] = [zones[j], zones[i]];
+  }
+
+  blocks = [];
+  for (let i = 0; i < cfg.teamCount; i++) {
+    blocks.push(makeBlock(false, zones[i], total));
+  }
+  for (let i = 0; i < cfg.oppCount; i++) {
+    blocks.push(makeBlock(true, zones[cfg.teamCount + i], total));
+  }
+}
+
+// ── DRAW ──
+function drawBlock(b) {
+  const x = b.x - b.bw / 2;
+  const y = b.y - b.bh / 2;
+  const r = b.bh * 0.08;
+
+  // Glow
+  const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.bw * 0.7);
+  g.addColorStop(0, b.color + '30');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.bw * 0.7, 0, Math.PI * 2); ctx.fill();
+
+  // Body
+  ctx.beginPath();
+  ctx.roundRect(x, y, b.bw, b.bh, r);
+  ctx.fillStyle   = b.color + 'CC';
+  ctx.fill();
+  ctx.strokeStyle = b.color;
+  ctx.lineWidth   = 2.5;
+  ctx.stroke();
+
+  // Top highlight
+  ctx.beginPath();
+  ctx.roundRect(x + 4, y + 4, b.bw - 8, b.bh * 0.18, r * 0.5);
+  ctx.fillStyle = 'rgba(255,255,255,0.13)';
+  ctx.fill();
+}
+
+function frame() {
+  const W = canvas.width, H = canvas.height;
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#050D14'); bg.addColorStop(1,'#0A1929');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)'; ctx.lineWidth = 1;
+  for (let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for (let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  ctx.strokeStyle='rgba(0,212,255,0.06)'; ctx.setLineDash([8,8]);
+  ctx.beginPath();ctx.moveTo(0,H*0.5);ctx.lineTo(W,H*0.5);ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (!paused) {
+    blocks.forEach(b => {
+      b.x += b.vx;
+      if (Math.abs(b.tx - b.x) < b.bw * 0.08) setTarget(b);
+    });
+  }
+  blocks.forEach(drawBlock);
+  raf = requestAnimationFrame(frame);
+}
+
+// ── SCENE ──
+function startScene() {
+  const dur = cfg.timing * 1000;
+  tbar.style.transition = 'none';
+  tbar.style.width = '100%';
+  requestAnimationFrame(() => {
+    tbar.style.transition = `width ${dur}ms linear`;
+    tbar.style.width = '0%';
+  });
+  sceneTO = setTimeout(() => {
+    trials++;
+    htrial.textContent = trials;
+    // Full random reposition on every trial end
+    blocks.forEach(b => {
+      b.x = randomX(b);
+      setTarget(b);
+    });
+    startScene();
+  }, dur);
+}
+
+function startSessTimer() {
+  sessSeconds=0; trials=0; htrial.textContent=0;
+  clearInterval(sessTimer);
+  sessTimer = setInterval(() => {
+    sessSeconds++;
+    const m=Math.floor(sessSeconds/60), s=sessSeconds%60;
+    htime.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  },1000);
+}
+
+// ── START ──
+// ── SCREEN HELPER ──
+function showScreen(id) {
+  document.getElementById('screen-setup').style.display   = id === 'setup'    ? 'flex'  : 'none';
+  document.getElementById('screen-guide').style.display   = id === 'guide'    ? 'flex'  : 'none';
+  document.getElementById('screen-training').style.display = id === 'training' ? 'block' : 'none';
+}
+
+// ── REALTIME SIZE ──
+function onRtBw(val) {
+  document.getElementById('rt-bwv').textContent = val + '%';
+  cfg.blockW = parseInt(val) / 100;
+  rebuildBlockSizes();
+}
+function onRtBh(val) {
+  document.getElementById('rt-bhv').textContent = val + '%';
+  cfg.blockH = parseInt(val) / 100;
+  rebuildBlockSizes();
+}
+function rebuildBlockSizes() {
+  const total = cfg.teamCount + cfg.oppCount;
+  const W = canvas.width, H = canvas.height;
+  const zoneW = W / total;
+  blocks.forEach(b => {
+    b.bw  = zoneW * cfg.blockW;
+    b.bh  = H * cfg.blockH;
+    b.pad = (zoneW - b.bw) / 2;
+    b.y   = H / 2;
+  });
+}
+
+// SESSION START → show guide
+document.getElementById('startbtn').addEventListener('click', () => {
+  cfg.timing = parseFloat(document.getElementById('tslider').value);
+  cfg.speed  = parseInt(document.getElementById('sslider').value);
+  cfg.blockW = parseInt(document.getElementById('bwslider').value) / 100;
+  cfg.blockH = parseInt(document.getElementById('bhslider').value) / 100;
+  showScreen('guide');
+});
+
+// Guide START → actual session
+document.getElementById('guidestartbtn').addEventListener('click', () => {
+  launchSession();
+});
+
+function launchSession() {
+  showScreen('training');
+  resize();
+  makeBlocks();
+
+  if (raf) cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(frame);
+
+  let c = 3;
+  cdoEl.style.display = 'flex';
+  cdoNum.textContent  = c;
+  const tick = setInterval(() => {
+    c--;
+    if (c <= 0) {
+      clearInterval(tick);
+      cdoEl.style.display = 'none';
+      startSessTimer();
+      startScene();
+    } else {
+      cdoNum.textContent = c;
+    }
+  }, 900);
+}
+
+// ── PAUSE ──
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  if (paused) {
+    pauseBtn.textContent  = 'RESUME';
+    pauseBtn.style.color  = '#00D4FF';
+    clearTimeout(sceneTO);
+    clearInterval(sessTimer);
+  } else {
+    pauseBtn.textContent = 'PAUSE';
+    pauseBtn.style.color = '';
+    startSessTimer();
+    startScene();
+  }
+});
+
+// ── END ──
+endBtn.addEventListener('click', () => {
+  cancelAnimationFrame(raf); raf=null;
+  clearTimeout(sceneTO);
+  clearInterval(sessTimer);
+  paused=false;
+  pauseBtn.textContent='PAUSE'; pauseBtn.style.color='';
+  showScreen('setup');
+});
+
+window.addEventListener('resize', () => {
+  if (trainingEl.style.display==='block') resize();
+});
+// Only prevent touchmove on training screen (not setup)
+trainingEl.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+</script>
+</body>
+</html>
