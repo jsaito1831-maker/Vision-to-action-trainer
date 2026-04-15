@@ -370,6 +370,16 @@ input[type=range]::-webkit-slider-thumb {
   display:block;
 }
 
+/* UI auto-hide layer */
+.ui-layer {
+  transition: opacity 0.4s ease;
+  opacity: 1;
+}
+.ui-layer.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hud {
   position:absolute; top:0; left:0; right:0;
   display:flex; justify-content:space-between; align-items:center;
@@ -673,45 +683,50 @@ input[type=range]::-webkit-slider-thumb {
 <!-- TRAINING -->
 <div id="screen-training">
   <canvas id="canvas"></canvas>
-  <div class="hud">
-    <div>
-      <div class="hud-title">VATS</div>
-      <div class="hud-sub">センターバック — ① オールコートプレス</div>
+
+  <div class="ui-layer" id="ui-layer">
+    <div class="hud">
+      <div>
+        <div class="hud-title">VATS</div>
+        <div class="hud-sub">センターバック — ① オールコートプレス</div>
+      </div>
+      <div class="hud-stats">
+        <div class="hud-stat">
+          <span class="hud-stat-v" id="htrial">0</span>
+          <span class="hud-stat-l">試行</span>
+        </div>
+        <div class="hud-div"></div>
+        <div class="hud-stat">
+          <span class="hud-stat-v" id="htime">0:00</span>
+          <span class="hud-stat-l">経過</span>
+        </div>
+      </div>
     </div>
-    <div class="hud-stats">
-      <div class="hud-stat">
-        <span class="hud-stat-v" id="htrial">0</span>
-        <span class="hud-stat-l">試行</span>
+
+    <!-- Realtime size panel -->
+    <div id="size-panel">
+      <div class="size-row">
+        <span class="size-label">横</span>
+        <input type="range" id="rt-bw" min="20" max="100" step="1" value="90"
+          oninput="onRtBw(this.value)">
+        <span class="size-num" id="rt-bwv">90%</span>
       </div>
-      <div class="hud-div"></div>
-      <div class="hud-stat">
-        <span class="hud-stat-v" id="htime">0:00</span>
-        <span class="hud-stat-l">経過</span>
+      <div class="size-row">
+        <span class="size-label">縦</span>
+        <input type="range" id="rt-bh" min="10" max="100" step="1" value="90"
+          oninput="onRtBh(this.value)">
+        <span class="size-num" id="rt-bhv">90%</span>
       </div>
+    </div>
+
+    <div class="tbar-wrap"><div class="tbar-fill" id="tbar"></div></div>
+
+    <div class="btns">
+      <button class="btn btn-pause" id="pausebtn">PAUSE</button>
+      <button class="btn btn-end" id="endbtn">終了</button>
     </div>
   </div>
 
-  <!-- Realtime size panel -->
-  <div id="size-panel">
-    <div class="size-row">
-      <span class="size-label">横</span>
-      <input type="range" id="rt-bw" min="20" max="100" step="1" value="90"
-        oninput="onRtBw(this.value)">
-      <span class="size-num" id="rt-bwv">90%</span>
-    </div>
-    <div class="size-row">
-      <span class="size-label">縦</span>
-      <input type="range" id="rt-bh" min="10" max="100" step="1" value="90"
-        oninput="onRtBh(this.value)">
-      <span class="size-num" id="rt-bhv">90%</span>
-    </div>
-  </div>
-
-  <div class="tbar-wrap"><div class="tbar-fill" id="tbar"></div></div>
-  <div class="btns">
-    <button class="btn btn-pause" id="pausebtn">PAUSE</button>
-    <button class="btn btn-end" id="endbtn">終了</button>
-  </div>
   <div id="cdo"><span id="cdo-num">3</span></div>
 </div>
 
@@ -1057,6 +1072,27 @@ function showScreen(id) {
   });
 }
 
+// ── UI AUTO-HIDE ──
+let uiHideTimer = null;
+const uiLayer = document.getElementById('ui-layer');
+
+function showUI() {
+  uiLayer.classList.remove('hidden');
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(() => {
+    uiLayer.classList.add('hidden');
+  }, 3000);
+}
+
+function initUIAutoHide() {
+  const el = document.getElementById('screen-training');
+  el.addEventListener('touchstart', showUI, { passive: true });
+  el.addEventListener('touchmove',  showUI, { passive: true });
+  el.addEventListener('click',      showUI);
+  // Show initially
+  showUI();
+}
+
 // ── REALTIME SIZE ──
 function onRtBw(val) {
   document.getElementById('rt-bwv').textContent = val + '%';
@@ -1104,6 +1140,7 @@ function launchSession() {
   showScreen('training');
   resize();
   makeBlocks();
+  initUIAutoHide();
 
   if (raf) cancelAnimationFrame(raf);
   raf = requestAnimationFrame(frame);
