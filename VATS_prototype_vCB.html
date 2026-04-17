@@ -902,8 +902,13 @@ function chg(t, d) {
 
 // ── CANVAS ──
 function resize() {
-  canvas.width  = trainingEl.clientWidth  || window.innerWidth;
-  canvas.height = trainingEl.clientHeight || window.innerHeight;
+  // iPad Safari: force reflow before reading dimensions
+  const w = trainingEl.offsetWidth  || window.innerWidth;
+  const h = trainingEl.offsetHeight || window.innerHeight;
+  canvas.width  = w;
+  canvas.height = h;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
 }
 
 // ── BLOCK ──
@@ -1138,27 +1143,40 @@ document.getElementById('guidestartbtn').addEventListener('click', () => {
 
 function launchSession() {
   showScreen('training');
-  resize();
-  makeBlocks();
-  initUIAutoHide();
 
-  if (raf) cancelAnimationFrame(raf);
-  raf = requestAnimationFrame(frame);
+  // iPad Safari fix: wait for layout to settle before sizing canvas
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      resize();
+      makeBlocks();
+      initUIAutoHide();
 
-  let c = 3;
-  cdoEl.style.display = 'flex';
-  cdoNum.textContent  = c;
-  const tick = setInterval(() => {
-    c--;
-    if (c <= 0) {
-      clearInterval(tick);
-      cdoEl.style.display = 'none';
-      startSessTimer();
-      startScene();
-    } else {
-      cdoNum.textContent = c;
-    }
-  }, 900);
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(frame);
+
+      let c = 3;
+      cdoEl.style.display = 'flex';
+      cdoNum.textContent  = c;
+
+      // Use performance.now() based countdown for reliability on iPad Safari
+      const cdoStart = performance.now();
+      const cdoInterval = 900;
+      function cdoTick() {
+        const elapsed = performance.now() - cdoStart;
+        const step = Math.floor(elapsed / cdoInterval);
+        const remaining = 3 - step;
+        if (remaining <= 0) {
+          cdoEl.style.display = 'none';
+          startSessTimer();
+          startScene();
+        } else {
+          cdoNum.textContent = remaining;
+          requestAnimationFrame(cdoTick);
+        }
+      }
+      requestAnimationFrame(cdoTick);
+    });
+  });
 }
 
 // ── PAUSE ──
