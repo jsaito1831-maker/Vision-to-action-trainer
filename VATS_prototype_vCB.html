@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+TYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -587,6 +587,53 @@ input[type=range]::-webkit-slider-thumb {
     <p>ボールを受ける前に左右を確認し、ディスプレイの情報でプレッシャー方向を把握してからパスコースを選択してください。</p>
   </div>
 
+  <div class="sec-label" style="margin-top:28px">フラッシュモード <span style="color:#00D4FF;font-size:9px;letter-spacing:1px;margin-left:8px">PERCEPTION TRAINING</span></div>
+  <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <span style="font-size:13px;font-weight:500;opacity:0.85">フラッシュモード ON</span>
+      <div id="flash-toggle" onclick="toggleFlashMode()" style="width:48px;height:26px;border-radius:13px;background:#1B2E42;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;transition:background 0.2s;">
+        <div id="flash-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#6B8099;transition:all 0.2s;"></div>
+      </div>
+    </div>
+    <div id="flash-options" style="display:none;flex-direction:column;gap:14px;">
+      <div class="slider-row">
+        <div class="slider-hdr">
+          <span class="slider-name">提示時間（フラッシュ）</span>
+          <span><span class="slider-val" id="fdv">300</span><span class="slider-unit">ms</span></span>
+        </div>
+        <input type="range" id="fdslider" min="100" max="600" step="50" value="300"
+          oninput="document.getElementById('fdv').textContent=this.value">
+      </div>
+      <div class="slider-row">
+        <div class="slider-hdr">
+          <span class="slider-name">フラッシュ間隔</span>
+          <span><span class="slider-val" id="fiv">1000</span><span class="slider-unit">ms</span></span>
+        </div>
+        <input type="range" id="fislider" min="200" max="3000" step="100" value="1000"
+          oninput="document.getElementById('fiv').textContent=this.value">
+      </div>
+      <div class="slider-row">
+        <div class="slider-hdr">
+          <span class="slider-name">メトロノーム（gaze shift）</span>
+          <span><span class="slider-val" id="bpmv">60</span><span class="slider-unit">BPM</span></span>
+        </div>
+        <input type="range" id="bpmslider" min="30" max="600" step="10" value="60"
+          oninput="document.getElementById('bpmv').textContent=this.value">
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;opacity:0.7">メトロノーム音</span>
+        <div id="metro-sound-toggle" onclick="toggleMetroSound()" style="width:40px;height:22px;border-radius:11px;background:#00D4FF;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;transition:background 0.2s;">
+          <div id="metro-sound-knob" style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#0D1B2A;transition:all 0.2s;"></div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border-left:2px solid rgba(0,212,255,0.3);border-radius:0 6px 6px 0;padding:10px 12px;">
+        <p style="font-size:11px;line-height:1.7;color:#6B8099;">
+          <b style="color:#F0F4F8">ビート音</b>と同時にブロックが<b style="color:#00D4FF">一瞬だけ</b>表示されます。<br>gaze shift・VOR・SJの迅速性を鍛えます。
+        </p>
+      </div>
+    </div>
+  </div>
+
   <button class="start-btn" id="startbtn">SESSION START</button>
 </div>
 
@@ -691,6 +738,16 @@ input[type=range]::-webkit-slider-thumb {
         <div class="hud-sub">センターバック — ① オールコートプレス</div>
       </div>
       <div class="hud-stats">
+        <div class="hud-stat" id="hud-flash-stat" style="display:none;">
+          <span class="hud-stat-v" style="font-size:14px;color:#00D4FF;" id="hbpm">60</span>
+          <span class="hud-stat-l">BPM</span>
+        </div>
+        <div class="hud-div" id="hud-flash-div" style="display:none;"></div>
+        <div class="hud-stat" id="hud-fd-stat" style="display:none;">
+          <span class="hud-stat-v" style="font-size:14px;color:#FFD700;" id="hfd">300</span>
+          <span class="hud-stat-l">ms</span>
+        </div>
+        <div class="hud-div" id="hud-fd-div" style="display:none;"></div>
         <div class="hud-stat">
           <span class="hud-stat-v" id="htrial">0</span>
           <span class="hud-stat-l">試行</span>
@@ -846,13 +903,25 @@ function updateGuideScreen(sit) {
 const cfg = {
   teamColor: '#00E5A0',
   oppColor:  '#FF4560',
-  teamCount: 2, // サイドバック×2を表現
-  oppCount:  4, // 高密度プレッシャー
+  teamCount: 2,
+  oppCount:  4,
   timing:    1.8,
   speed:     8,
   blockW:    0.90,
   blockH:    0.90,
+  // Flash mode
+  flashMode:     false,
+  flashDuration: 300,
+  flashInterval: 1000,
+  metroBpm:      60,
+  metroSound:    true,
 };
+
+// Flash / Metronome state
+let flashVisible   = false;
+let flashTO        = null;
+let metroInterval  = null;
+let audioCtx       = null;
 
 let blocks      = [];
 let raf         = null;
@@ -873,6 +942,117 @@ const htrial     = document.getElementById('htrial');
 const htime      = document.getElementById('htime');
 const pauseBtn   = document.getElementById('pausebtn');
 const endBtn     = document.getElementById('endbtn');
+
+// ── FLASH MODE UI ──
+let flashModeOn    = false;
+let metroSoundOn   = true;
+
+function toggleFlashMode() {
+  flashModeOn = !flashModeOn;
+  const tog  = document.getElementById('flash-toggle');
+  const knob = document.getElementById('flash-knob');
+  const opts = document.getElementById('flash-options');
+  if (flashModeOn) {
+    tog.style.background  = '#00D4FF';
+    knob.style.background = '#0D1B2A';
+    knob.style.left       = '25px';
+    opts.style.display    = 'flex';
+  } else {
+    tog.style.background  = '#1B2E42';
+    knob.style.background = '#6B8099';
+    knob.style.left       = '3px';
+    opts.style.display    = 'none';
+  }
+}
+
+function toggleMetroSound() {
+  metroSoundOn = !metroSoundOn;
+  const tog  = document.getElementById('metro-sound-toggle');
+  const knob = document.getElementById('metro-sound-knob');
+  if (metroSoundOn) {
+    tog.style.background = '#00D4FF';
+    knob.style.left      = 'auto';
+    knob.style.right     = '2px';
+  } else {
+    tog.style.background = '#1B2E42';
+    knob.style.right     = 'auto';
+    knob.style.left      = '2px';
+  }
+}
+
+// ── AUDIO ──
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playClick(isAccent) {
+  if (!metroSoundOn) return;
+  try {
+    const ac  = getAudioCtx();
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.connect(env); env.connect(ac.destination);
+    osc.frequency.value = isAccent ? 1200 : 800;
+    env.gain.setValueAtTime(0.35, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.08);
+    osc.start(ac.currentTime);
+    osc.stop(ac.currentTime + 0.08);
+  } catch(e) {}
+}
+
+// ── METRONOME ──
+function startMetronome() {
+  stopMetronome();
+  const bpm      = cfg.metroBpm;
+  const interval = (60 / bpm) * 1000;
+  let beat       = 0;
+
+  const tick = () => {
+    if (paused) return;
+    playClick(beat % 4 === 0);
+    beat++;
+  };
+  tick();
+  metroInterval = setInterval(tick, interval);
+}
+
+function stopMetronome() {
+  clearInterval(metroInterval);
+  metroInterval = null;
+}
+
+// ── FLASH (independent from metronome) ──
+let flashLoopTO = null;
+
+function startFlashLoop() {
+  stopFlashLoop();
+  const loop = () => {
+    if (paused) { flashLoopTO = setTimeout(loop, 100); return; }
+    // Reposition blocks on each flash
+    blocks.forEach(b => { b.x = randomX(b); setTarget(b); });
+    trials++;
+    htrial.textContent = trials;
+    triggerFlash();
+    flashLoopTO = setTimeout(loop, cfg.flashInterval);
+  };
+  loop();
+}
+
+function stopFlashLoop() {
+  clearTimeout(flashLoopTO);
+  flashLoopTO = null;
+  flashVisible = false;
+}
+
+// ── FLASH TRIGGER ──
+function triggerFlash() {
+  flashVisible = true;
+  clearTimeout(flashTO);
+  flashTO = setTimeout(() => {
+    flashVisible = false;
+  }, cfg.flashDuration);
+}
 
 // ── SWATCHES ──
 ['tsw','osw'].forEach(id => {
@@ -902,13 +1082,8 @@ function chg(t, d) {
 
 // ── CANVAS ──
 function resize() {
-  // iPad Safari: force reflow before reading dimensions
-  const w = trainingEl.offsetWidth  || window.innerWidth;
-  const h = trainingEl.offsetHeight || window.innerHeight;
-  canvas.width  = w;
-  canvas.height = h;
-  canvas.style.width  = w + 'px';
-  canvas.style.height = h + 'px';
+  canvas.width  = trainingEl.clientWidth  || window.innerWidth;
+  canvas.height = trainingEl.clientHeight || window.innerHeight;
 }
 
 // ── BLOCK ──
@@ -1028,12 +1203,38 @@ function frame() {
       if (Math.abs(b.tx - b.x) < b.bw * 0.08) setTarget(b);
     });
   }
-  blocks.forEach(drawBlock);
+
+  // Flash mode: only draw blocks when flashVisible, else show hint overlay
+  if (cfg.flashMode) {
+    if (flashVisible) {
+      blocks.forEach(drawBlock);
+      // Flash border pulse
+      ctx.strokeStyle = 'rgba(0,212,255,0.5)';
+      ctx.lineWidth   = 3;
+      ctx.strokeRect(2, 2, W - 4, H - 4);
+    } else {
+      // Dark overlay with subtle "waiting" indicator
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(0,212,255,0.08)';
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else {
+    blocks.forEach(drawBlock);
+  }
   raf = requestAnimationFrame(frame);
 }
 
 // ── SCENE ──
 function startScene() {
+  if (cfg.flashMode) {
+    // Flash mode: metronome drives flashes; reposition blocks each beat via metronome callback
+    tbar.style.transition = 'none';
+    tbar.style.width = '0%';
+    return;
+  }
   const dur = cfg.timing * 1000;
   tbar.style.transition = 'none';
   tbar.style.width = '100%';
@@ -1044,7 +1245,6 @@ function startScene() {
   sceneTO = setTimeout(() => {
     trials++;
     htrial.textContent = trials;
-    // Full random reposition on every trial end
     blocks.forEach(b => {
       b.x = randomX(b);
       setTarget(b);
@@ -1123,10 +1323,15 @@ function rebuildBlockSizes() {
 
 // SESSION START → show guide
 document.getElementById('startbtn').addEventListener('click', () => {
-  cfg.timing = parseFloat(document.getElementById('tslider').value);
-  cfg.speed  = parseInt(document.getElementById('sslider').value);
-  cfg.blockW = parseInt(document.getElementById('bwslider').value) / 100;
-  cfg.blockH = parseInt(document.getElementById('bhslider').value) / 100;
+  cfg.timing        = parseFloat(document.getElementById('tslider').value);
+  cfg.speed         = parseInt(document.getElementById('sslider').value);
+  cfg.blockW        = parseInt(document.getElementById('bwslider').value) / 100;
+  cfg.blockH        = parseInt(document.getElementById('bhslider').value) / 100;
+  cfg.flashMode     = flashModeOn;
+  cfg.flashDuration = parseInt(document.getElementById('fdslider').value);
+  cfg.flashInterval = parseInt(document.getElementById('fislider').value);
+  cfg.metroBpm      = parseInt(document.getElementById('bpmslider').value);
+  cfg.metroSound    = metroSoundOn;
   showScreen('guide');
 });
 
@@ -1144,7 +1349,18 @@ document.getElementById('guidestartbtn').addEventListener('click', () => {
 function launchSession() {
   showScreen('training');
 
-  // iPad Safari fix: wait for layout to settle before sizing canvas
+  // HUD flash indicators
+  const showFlashHud = cfg.flashMode;
+  document.getElementById('hud-flash-stat').style.display = showFlashHud ? 'flex' : 'none';
+  document.getElementById('hud-flash-div').style.display  = showFlashHud ? 'block' : 'none';
+  document.getElementById('hud-fd-stat').style.display    = showFlashHud ? 'flex' : 'none';
+  document.getElementById('hud-fd-div').style.display     = showFlashHud ? 'block' : 'none';
+  if (showFlashHud) {
+    document.getElementById('hbpm').textContent = cfg.metroBpm;
+    document.getElementById('hfd').textContent  = cfg.flashDuration;
+  }
+
+  // iPad Safari fix: double rAF to ensure layout is settled
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       resize();
@@ -1158,17 +1374,18 @@ function launchSession() {
       cdoEl.style.display = 'flex';
       cdoNum.textContent  = c;
 
-      // Use performance.now() based countdown for reliability on iPad Safari
       const cdoStart = performance.now();
-      const cdoInterval = 900;
       function cdoTick() {
-        const elapsed = performance.now() - cdoStart;
-        const step = Math.floor(elapsed / cdoInterval);
+        const step = Math.floor((performance.now() - cdoStart) / 900);
         const remaining = 3 - step;
         if (remaining <= 0) {
           cdoEl.style.display = 'none';
           startSessTimer();
           startScene();
+          if (cfg.flashMode) {
+            startMetronome();
+            startFlashLoop();
+          }
         } else {
           cdoNum.textContent = remaining;
           requestAnimationFrame(cdoTick);
@@ -1183,25 +1400,34 @@ function launchSession() {
 pauseBtn.addEventListener('click', () => {
   paused = !paused;
   if (paused) {
-    pauseBtn.textContent  = 'RESUME';
-    pauseBtn.style.color  = '#00D4FF';
+    pauseBtn.textContent = 'RESUME';
+    pauseBtn.style.color = '#00D4FF';
     clearTimeout(sceneTO);
     clearInterval(sessTimer);
+    stopMetronome();
+    stopFlashLoop();
   } else {
     pauseBtn.textContent = 'PAUSE';
     pauseBtn.style.color = '';
     startSessTimer();
     startScene();
+    if (cfg.flashMode) {
+      startMetronome();
+      startFlashLoop();
+    }
   }
 });
 
 // ── END ──
 endBtn.addEventListener('click', () => {
-  cancelAnimationFrame(raf); raf=null;
+  cancelAnimationFrame(raf); raf = null;
   clearTimeout(sceneTO);
   clearInterval(sessTimer);
-  paused=false;
-  pauseBtn.textContent='PAUSE'; pauseBtn.style.color='';
+  stopMetronome();
+  stopFlashLoop();
+  flashVisible = false;
+  paused = false;
+  pauseBtn.textContent = 'PAUSE'; pauseBtn.style.color = '';
   showScreen('setup');
 });
 
